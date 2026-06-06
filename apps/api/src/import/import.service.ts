@@ -7,7 +7,7 @@ import { COLUMNS_BY_TYPE, ImportType } from './import.constants';
 import { parseRows, type ParsedRow, type ParseResult, type RowError } from './validators';
 
 /** 初始密码（首登强制改密）。生产可经环境变量覆盖。 */
-const INIT_PASSWORD = process.env.INIT_PASSWORD ?? 'Eval@123456';
+const INIT_PASSWORD = process.env.INIT_PASSWORD ?? '123456';
 
 export interface PreviewResult extends ParseResult {
   summary: { total: number; valid: number; errorRows: number; dbConflicts: number };

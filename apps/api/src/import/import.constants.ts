@@ -30,7 +30,6 @@ export const TEACHER_COLUMNS: ColumnSpec[] = [
   { header: '职称', field: 'title', required: false, type: 'string' },
   { header: '是否担任中层管理职务', field: 'isAdminRole', required: true, type: 'bool' },
   { header: '是否课程负责人', field: 'isCourseOwner', required: false, type: 'bool' },
-  { header: '邮箱', field: 'email', required: false, type: 'string' },
 ];
 
 /** 学生名单（需求 §4.2） */
