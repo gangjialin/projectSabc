@@ -17,7 +17,7 @@ COPY . .
 
 RUN pnpm install --frozen-lockfile \
   && pnpm --filter @app/shared build \
-  && pnpm --filter @app/api prisma generate \
+  && pnpm --filter @app/api exec prisma generate \
   && pnpm --filter @app/api build \
   && pnpm --filter @app/web build
 
