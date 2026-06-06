@@ -27,6 +27,7 @@ model User {
   title         String?
   isAdminRole   Boolean  @default(false) // 中层管理职务标记
   isCourseOwner Boolean  @default(false) // 课程负责人
+  isApprover    Boolean  @default(false) // 审核委员会成员（院长/书记/中层，参与发布会签）
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -612,6 +613,55 @@ model StudentEvalAudit {
 
   @@unique([studentId, teacherId, courseId, academicYear])
   @@index([teacherId, academicYear])
+}
+
+// ========== 成绩审核会签（M8 / §附录6） ==========
+
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  type          ApprovalType
+  academicYear  String
+  status        ApprovalStatus @default(PENDING)
+  payload       Json? // GRADE_CHANGE: {teacherId, newGrade, reason}
+  initiatedById String
+  createdAt     DateTime       @default(now())
+  decidedAt     DateTime?
+
+  votes ApprovalVote[]
+
+  @@index([academicYear, status])
+  @@index([type, status])
+}
+
+enum ApprovalType {
+  PUBLISH
+  GRADE_CHANGE
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// 审签记录（独立留痕：谁、何时、同意/驳回、意见）
+model ApprovalVote {
+  id        String       @id @default(cuid())
+  requestId String
+  memberId  String
+  decision  VoteDecision
+  opinion   String?
+  votedAt   DateTime     @default(now())
+
+  request ApprovalRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, memberId])
+  @@index([memberId])
+}
+
+enum VoteDecision {
+  AGREE
+  REJECT
 }
 
 // ========== 系统配置 ==========

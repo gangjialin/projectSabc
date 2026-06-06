@@ -361,6 +361,7 @@ export class ImportService {
             email: (r.email as string) ?? null,
             isAdminRole: (r.isAdminRole as boolean) ?? false,
             isCourseOwner: (r.isCourseOwner as boolean) ?? false,
+            isApprover: (r.isApprover as boolean) ?? false,
             roles: { create: { roleId: role.id } },
           },
         });

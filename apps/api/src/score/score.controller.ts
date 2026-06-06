@@ -96,7 +96,7 @@ export class ScoreController {
     @Req() req: { user: { userId: string } },
     @Query('year') year: string,
   ) {
-    return this.score.getTeacherResult(req.user.userId, year);
+    return this.score.getTeacherResult(req.user.userId, year, true);
   }
 
   /** GET /api/v1/score/teacher/:id/result?year= —— 管理端查指定教师成绩单 */

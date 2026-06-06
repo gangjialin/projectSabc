@@ -281,8 +281,13 @@ export class ScoreService {
 
   /**
    * 取某教师的完整评价结果（成绩单用，T-802）：FinalResult + 维度明细 + 前置限定标记。
+   * gated=true（教师本人查询）时，仅当结果已发布(PUBLISHED)才返回明细，否则隐藏（T-804 门禁）。
    */
-  async getTeacherResult(teacherId: string, academicYear: string) {
+  async getTeacherResult(
+    teacherId: string,
+    academicYear: string,
+    gated = false,
+  ) {
     const [final, dimension, flags, teacher] = await Promise.all([
       this.prisma.finalResult.findUnique({
         where: { teacherId_academicYear: { teacherId, academicYear } },
@@ -298,7 +303,13 @@ export class ScoreService {
         select: { name: true, loginAccount: true, department: true },
       }),
     ]);
-    return { teacher, final, dimension, flags };
+
+    const published = final?.status === 'PUBLISHED';
+    if (gated && !published) {
+      // 未发布：隐藏成绩明细，仅告知状态
+      return { teacher, published: false, final: null, dimension: null, flags: [] };
+    }
+    return { teacher, published, final, dimension, flags };
   }
 
   /**

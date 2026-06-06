@@ -133,6 +133,23 @@ export enum RoleCode {
   QUALITY_DEPT = 'QUALITY_DEPT', // 教学质量保障部
 }
 
+/** 成绩审核会签（M8） */
+export enum ApprovalType {
+  PUBLISH = 'PUBLISH', // 发布成绩
+  GRADE_CHANGE = 'GRADE_CHANGE', // 修改某教师最终等级
+}
+
+export enum ApprovalStatus {
+  PENDING = 'PENDING', // 会签中
+  APPROVED = 'APPROVED', // 全票通过、已执行
+  REJECTED = 'REJECTED', // 有人驳回、本轮作废
+}
+
+export enum VoteDecision {
+  AGREE = 'AGREE',
+  REJECT = 'REJECT',
+}
+
 /** 维度编号常量 */
 export const DIMENSION_NOS = [1, 2, 3, 4, 5] as const;
 export type DimensionNo = (typeof DIMENSION_NOS)[number];
