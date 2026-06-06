@@ -1,0 +1,608 @@
+// 教师课程教学质量评分系统 —— Prisma Schema
+// 严格对应 Docs/design.md §3.2。枚举与 packages/shared/src/enums.ts 同步。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== 用户与角色 ==========
+
+model User {
+  id            String   @id @default(cuid())
+  loginAccount  String   @unique
+  passwordHash  String
+  mustChangePwd Boolean  @default(true) // 首次登录强制改密
+  name          String
+  email         String?
+  phone         String?
+  userType      UserType
+  department    String?
+  className     String?
+  major         String?
+  title         String?
+  isAdminRole   Boolean  @default(false) // 中层管理职务标记
+  isCourseOwner Boolean  @default(false) // 课程负责人
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  roles             UserRole[]
+  taughtCourses     Course[]               @relation("teacherCourses")
+  reviewTasks       ReviewTask[]
+  submissions       EvalSubmission[]
+  flags             PreConditionFlag[]
+  results           FinalResult[]
+  exemptionsApplied StudentEvalExemption[] @relation("teacherExemption")
+  trackingsOwned    ImprovementTracking[]
+  appealsSubmitted  Appeal[]
+
+  @@index([userType])
+  @@index([department])
+  @@index([isAdminRole])
+}
+
+enum UserType {
+  TEACHER
+  STUDENT
+  ADMIN
+}
+
+model Role {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  name      String
+  userRoles UserRole[]
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+}
+
+// ========== 课程 ==========
+
+model Course {
+  id             String      @id @default(cuid())
+  courseCode     String      @unique
+  name           String
+  type           CourseType
+  level          CourseLevel @default(REGULAR)
+  semester       String
+  academicYear   String
+  teacherId      String
+  classNames     String[]
+  isTargetCourse Boolean     @default(false)
+  isReformCourse Boolean     @default(false) // 教改加难度课程
+  createdAt      DateTime    @default(now())
+
+  teacher     User                   @relation("teacherCourses", fields: [teacherId], references: [id])
+  reviewTasks ReviewTask[]
+  submissions EvalSubmission[]
+  interviews  Interview[]
+  exemptions  StudentEvalExemption[]
+  trackings   ImprovementTracking[]
+
+  @@index([academicYear, isTargetCourse])
+  @@index([teacherId])
+  @@index([type])
+}
+
+enum CourseType {
+  THEORY
+  PRACTICE
+  PROJECT
+  THESIS
+}
+
+enum CourseLevel {
+  CORE
+  PROJECT_L1
+  PROJECT_L2
+  REGULAR
+}
+
+// ========== 题目模板（按学校 5 维度框架，可按课程类型版本化） ==========
+
+model QuestionTemplate {
+  id          String      @id @default(cuid())
+  formType    FormType
+  courseType  CourseType? // null=通用，否则按课程类型差异化
+  version     Int         @default(1)
+  isActive    Boolean     @default(true)
+  description String?
+  createdAt   DateTime    @default(now())
+
+  dimensions Dimension[]
+
+  @@unique([formType, courseType, version])
+}
+
+enum FormType {
+  LECTURE
+  MATERIAL
+  PEER
+  STUDENT
+}
+
+model Dimension {
+  id          String @id @default(cuid())
+  templateId  String
+  dimensionNo Int // 1-5
+  name        String // 目标与思政 / 内容与方式 / 考核与评价 / 效果与达成 / 反思与改进
+  maxScore    Int // 20, 25, 20, 20, 15
+
+  template  QuestionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@unique([templateId, dimensionNo])
+}
+
+model Question {
+  id            String @id @default(cuid())
+  dimensionId   String
+  serialNo      Int // 该维度下的题序
+  indicator     String // 评价指标
+  scoreCriteria String // 评分要点
+  maxScore      Float // 该题分值（同维度题分值之和 = 维度 maxScore）
+
+  dimension Dimension    @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  answers   EvalAnswer[]
+
+  @@unique([dimensionId, serialNo])
+}
+
+// ========== 评价任务分配 ==========
+
+model ReviewTask {
+  id          String     @id @default(cuid())
+  courseId    String
+  reviewerId  String
+  taskType    TaskType
+  plannedDate DateTime?
+  status      TaskStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+
+  course     Course          @relation(fields: [courseId], references: [id])
+  reviewer   User            @relation(fields: [reviewerId], references: [id])
+  submission EvalSubmission?
+
+  @@index([reviewerId, status])
+  @@index([courseId])
+}
+
+enum TaskType {
+  LECTURE
+  MATERIAL
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+// ========== 评分提交（含 5 维度快照） ==========
+
+model EvalSubmission {
+  id                 String   @id @default(cuid())
+  formType           FormType
+  evaluatorId        String? // 学生匿名时为空
+  evaluatorRole      String
+  evaluateeTeacherId String
+  courseId           String
+  taskId             String?  @unique
+  sessionId          String?
+  semester           String
+  academicYear       String
+  isAnonymous        Boolean  @default(false)
+  templateVersion    Int // 关联题目版本
+
+  // 5 维度得分快照（提交时计算缓存）
+  totalScore Float? // 0-100
+  dim1Score  Float? // 目标与思政 0-20
+  dim2Score  Float? // 内容与方式 0-25
+  dim3Score  Float? // 考核与评价 0-20
+  dim4Score  Float? // 效果与达成 0-20
+  dim5Score  Float? // 反思与改进 0-15
+  // 维度得分率（用于否决判定）
+  dim1Rate   Float?
+  dim2Rate   Float?
+  dim3Rate   Float?
+  dim4Rate   Float?
+  dim5Rate   Float?
+
+  comment     String?
+  submittedAt DateTime @default(now())
+  isLocked    Boolean  @default(true)
+  ipAddress   String?
+
+  evaluator User?         @relation(fields: [evaluatorId], references: [id])
+  course    Course        @relation(fields: [courseId], references: [id])
+  task      ReviewTask?   @relation(fields: [taskId], references: [id])
+  session   SaykeSession? @relation(fields: [sessionId], references: [id])
+  answers   EvalAnswer[]
+
+  @@index([evaluateeTeacherId, formType, academicYear])
+  @@index([sessionId])
+}
+
+model EvalAnswer {
+  id           String @id @default(cuid())
+  submissionId String
+  questionId   String
+  likertScore  Int // 1-5
+  actualScore  Float // 题目分值 × likert/5
+
+  submission EvalSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question   Question       @relation(fields: [questionId], references: [id])
+
+  @@unique([submissionId, questionId])
+}
+
+// ========== 说课场次 ==========
+
+model SaykeSession {
+  id               String        @id @default(cuid())
+  name             String
+  scheduledDate    DateTime
+  academicYear     String
+  status           SessionStatus @default(PREPARED)
+  currentTeacherId String?
+  createdAt        DateTime      @default(now())
+
+  teachers    SessionTeacher[]
+  submissions EvalSubmission[]
+
+  @@index([academicYear])
+}
+
+enum SessionStatus {
+  PREPARED
+  IN_PROGRESS
+  LOCKED
+}
+
+model SessionTeacher {
+  id        String           @id @default(cuid())
+  sessionId String
+  teacherId String
+  courseId  String
+  orderNo   Int
+  status    TeacherSayStatus @default(WAITING)
+  startedAt DateTime?
+  lockedAt  DateTime?
+
+  session SaykeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, orderNo])
+  @@index([sessionId, status])
+}
+
+enum TeacherSayStatus {
+  WAITING
+  ACTIVE
+  LOCKED
+}
+
+// ========== 个别访谈 ==========
+
+model Interview {
+  id                 String          @id @default(cuid())
+  courseId           String
+  teacherId          String
+  academicYear       String
+  selectedStudentIds String[]
+  interviewDate      DateTime?
+  status             InterviewStatus @default(PLANNED)
+
+  course Course           @relation(fields: [courseId], references: [id])
+  scores InterviewScore[]
+
+  @@index([teacherId, academicYear])
+}
+
+enum InterviewStatus {
+  PLANNED
+  COMPLETED
+}
+
+model InterviewScore {
+  id              String   @id @default(cuid())
+  interviewId     String
+  reviewerId      String
+  capabilityScore Int // 0-8
+  methodScore     Int // 0-6
+  assessmentScore Int // 0-6
+  comment         String?
+  submittedAt     DateTime @default(now())
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, reviewerId])
+}
+
+// ========== 学生评价免计入申请 ==========
+
+model StudentEvalExemption {
+  id           String @id @default(cuid())
+  teacherId    String
+  studentId    String
+  studentName  String
+  className    String
+  courseId     String
+  semester     String
+  academicYear String
+  reason       String // 申请理由（≥30 字，业务层校验）
+
+  // 三级审核：{status, opinion, reviewedAt, reviewerId, reviewerName}
+  deptChiefReview  Json?
+  collegeReview    Json?
+  universityReview Json?
+
+  finalStatus ExemptionStatus @default(PROCESSING)
+  submittedAt DateTime        @default(now())
+  decidedAt   DateTime?
+
+  teacher User   @relation("teacherExemption", fields: [teacherId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  @@index([teacherId, academicYear])
+  @@index([finalStatus])
+}
+
+enum ExemptionStatus {
+  PROCESSING
+  APPROVED
+  REJECTED
+}
+
+// ========== 前置限定标记（含维度否决） ==========
+
+model PreConditionFlag {
+  id               String           @id @default(cuid())
+  teacherId        String
+  academicYear     String
+  flagType         FlagType
+  dimViolation     Int? // 若为 DIM_VETO，记录维度编号 1-5
+  evidence         String?
+  evidenceFiles    String[]
+  gradeRestriction GradeRestriction
+  confirmedById    String
+  confirmedAt      DateTime         @default(now())
+  isAutoGenerated  Boolean          @default(false) // 系统自动产生（如维度否决，不可手改）
+
+  teacher User @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, academicYear])
+}
+
+enum FlagType {
+  ETHICS_ISSUE
+  MATERIAL_FRAUD
+  STUDENT_SCORE_LOW
+  RESPONSIBILITY_ACCIDENT
+  TEACHING_ERROR
+  DIM_VETO
+}
+
+enum GradeRestriction {
+  FORCE_D
+  NO_S
+  NO_B_OR_ABOVE
+  NO_A_OR_ABOVE
+}
+
+// ========== 维度合并结果（用于否决判定） ==========
+
+model DimensionResult {
+  id           String @id @default(cuid())
+  teacherId    String
+  academicYear String
+
+  dim1SupervisorRate Float?
+  dim1PeerRate       Float?
+  dim1StudentRate    Float?
+  dim1WeightedRate   Float?
+
+  dim2SupervisorRate Float?
+  dim2PeerRate       Float?
+  dim2StudentRate    Float?
+  dim2WeightedRate   Float?
+
+  dim3SupervisorRate Float?
+  dim3PeerRate       Float?
+  dim3StudentRate    Float?
+  dim3WeightedRate   Float?
+
+  dim4SupervisorRate Float?
+  dim4PeerRate       Float?
+  dim4StudentRate    Float?
+  dim4WeightedRate   Float?
+
+  dim5SupervisorRate Float?
+  dim5PeerRate       Float?
+  dim5StudentRate    Float?
+  dim5WeightedRate   Float?
+
+  hasDimVeto     Boolean  @default(false)
+  vetoDimensions Int[] // [3,5] 表示维度 3、5 触发否决
+
+  calculatedAt DateTime @default(now())
+
+  @@unique([teacherId, academicYear])
+  @@index([academicYear, hasDimVeto])
+}
+
+// ========== 最终结果 ==========
+
+model FinalResult {
+  id           String @id @default(cuid())
+  teacherId    String
+  academicYear String
+
+  // 上级评价
+  supervisorLectureAvg  Float?
+  supervisorMaterialAvg Float?
+  supervisorFinal       Float? // 听课×60% + 材料×40%
+
+  // 同行评价
+  peerFinal      Float? // 去高去低均分
+  peerValidCount Int    @default(0)
+
+  // 学生评价
+  studentSurveyAvg     Float? // 排除免计入后
+  studentSurveyCount   Int    @default(0)
+  studentExemptedCount Int    @default(0)
+  studentInterviewAvg  Float? // 20 分制
+  studentFinal         Float? // 问卷×80% + 访谈归一化×20%
+
+  // 综合
+  compositeScore Float?
+  rank           Int?
+  isDataComplete Boolean @default(false)
+
+  // 等级
+  suggestedGrade     Grade?
+  finalGrade         Grade?
+  isSCandidate       Boolean @default(false)
+  sApplicationStatus String?
+
+  // 中层干部专属
+  isMgmtRole              Boolean @default(false)
+  unitQualityContribution Float?
+
+  // 状态
+  status       ResultStatus @default(DRAFT)
+  publishedAt  DateTime?
+  calculatedAt DateTime?
+  updatedAt    DateTime     @updatedAt
+
+  teacher User @relation(fields: [teacherId], references: [id])
+
+  @@unique([teacherId, academicYear])
+  @@index([academicYear, finalGrade])
+  @@index([academicYear, rank])
+}
+
+enum Grade {
+  S
+  A
+  B
+  C
+  D
+}
+
+enum ResultStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  APPEAL
+  CONFIRMED
+}
+
+// ========== 持续改进跟踪单 ==========
+
+model ImprovementTracking {
+  id           String @id @default(cuid())
+  teacherId    String
+  courseId     String
+  academicYear String
+  grade        Grade // 触发跟踪的等级（通常 C）
+
+  problems Json // [{description, identifiedAt}]
+  actions  Json // [{description, expectedResult, expectedVerifyDate, verificationStatus, verificationResult, verifiedAt}]
+
+  collegeApproval    Json? // {opinion, approver, approvedAt}
+  universityApproval Json?
+
+  followUpLectures     Json? // 系部主任专项听课记录数组
+  nextPeriodEvaluation Json? // 下周期专项评估结果
+
+  status    TrackingStatus @default(DRAFTING)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  teacher User   @relation(fields: [teacherId], references: [id])
+  course  Course @relation(fields: [courseId], references: [id])
+
+  @@index([teacherId, academicYear])
+  @@index([status])
+}
+
+enum TrackingStatus {
+  DRAFTING
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+}
+
+// ========== 申诉（院级 + 校级） ==========
+
+model Appeal {
+  id            String      @id @default(cuid())
+  teacherId     String
+  academicYear  String
+  appealLevel   AppealLevel
+  reason        String
+  evidenceFiles String[]
+  submittedAt   DateTime    @default(now())
+  deadline      DateTime // 3 工作日
+
+  collegeProcess    Json? // {processor, result, opinion, processedAt}
+  universityProcess Json?
+
+  status AppealStatus @default(SUBMITTED)
+
+  teacher User @relation(fields: [teacherId], references: [id])
+
+  @@index([teacherId, academicYear])
+  @@index([status])
+}
+
+enum AppealLevel {
+  COLLEGE
+  UNIVERSITY
+}
+
+enum AppealStatus {
+  SUBMITTED
+  PROCESSING
+  ACCEPTED
+  REJECTED
+  CLOSED
+}
+
+// ========== 操作审计日志 ==========
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // EVAL_UNLOCK, FLAG_CREATE, GRADE_CHANGE, ...
+  targetType String
+  targetId   String
+  details    Json
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ========== 系统配置 ==========
+
+model SystemConfig {
+  key         String   @id
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}

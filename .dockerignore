@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.turbo
+**/.turbo
+**/dist
+apps/web/.next
+**/*.tsbuildinfo
+coverage
+.env
+.env.local
+*.log
+wendang
+review
