@@ -57,7 +57,7 @@ async function request<T>(
   return body.data;
 }
 
-export type ImportKind = 'teacher' | 'student' | 'course';
+export type ImportKind = 'teacher' | 'student' | 'course' | 'committee';
 
 export interface TemplateQuestion {
   id: string;

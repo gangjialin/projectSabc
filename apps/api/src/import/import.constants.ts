@@ -1,10 +1,11 @@
-import { CourseLevel, CourseType } from '@app/shared';
+import { CourseLevel, CourseType, RoleCode } from '@app/shared';
 
 /** 导入类型 */
 export enum ImportType {
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
   COURSE = 'COURSE',
+  COMMITTEE = 'COMMITTEE',
 }
 
 export type CellType = 'string' | 'enum' | 'bool' | 'list';
@@ -68,10 +69,26 @@ export const COURSE_COLUMNS: ColumnSpec[] = [
   { header: '是否教改加难度课程', field: 'isReformCourse', required: false, type: 'bool' },
 ];
 
+/** 院级质量监控组角色标记 → 角色码（需求 §4.4） */
+const COMMITTEE_ROLE_MAP: Record<string, string> = {
+  院长: RoleCode.DEAN,
+  系主任: RoleCode.DEAN,
+  质量委员: RoleCode.REVIEWER,
+};
+
+/** 院级质量监控组名单（需求 §4.4）：授角色 + 听课/材料任务分配 */
+export const COMMITTEE_COLUMNS: ColumnSpec[] = [
+  { header: '工号', field: 'loginAccount', required: true, type: 'string' },
+  { header: '角色', field: 'role', required: true, type: 'enum', enumMap: COMMITTEE_ROLE_MAP },
+  { header: '负责听课课程编号', field: 'lectureCourses', required: false, type: 'list' },
+  { header: '负责材料审查课程编号', field: 'materialCourses', required: false, type: 'list' },
+];
+
 export const COLUMNS_BY_TYPE: Record<ImportType, ColumnSpec[]> = {
   [ImportType.TEACHER]: TEACHER_COLUMNS,
   [ImportType.STUDENT]: STUDENT_COLUMNS,
   [ImportType.COURSE]: COURSE_COLUMNS,
+  [ImportType.COMMITTEE]: COMMITTEE_COLUMNS,
 };
 
 /** 多值字段分隔符：中英文逗号/分号 */
