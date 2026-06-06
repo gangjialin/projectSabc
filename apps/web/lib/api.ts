@@ -20,6 +20,7 @@ export interface LoginResult {
     account: string;
     userType: string;
     roles: string[];
+    isApprover: boolean;
   };
 }
 
@@ -186,6 +187,34 @@ export interface ReportCourseInput {
   isCourseOwner?: boolean;
 }
 
+// ── 成绩审核会签（M8）──
+export interface ApprovalVoteRow {
+  memberName: string;
+  decision: 'AGREE' | 'REJECT';
+  opinion: string | null;
+  votedAt: string;
+}
+export interface ApprovalRequestRow {
+  id: string;
+  type: 'PUBLISH' | 'GRADE_CHANGE';
+  academicYear: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  payload: { teacherId?: string; newGrade?: string; reason?: string } | null;
+  createdAt: string;
+  decidedAt: string | null;
+  votes: ApprovalVoteRow[];
+}
+export interface PendingApproval {
+  id: string;
+  type: 'PUBLISH' | 'GRADE_CHANGE';
+  academicYear: string;
+  payload: { teacherId?: string; newGrade?: string; reason?: string } | null;
+  createdAt: string;
+  myVote: 'AGREE' | 'REJECT' | null;
+  agreed: number;
+  total: number;
+}
+
 // ── 学生评教（M6）──
 export interface StudentTeacher {
   courseId: string;
@@ -245,6 +274,7 @@ export interface FinalResultRow {
   isDataComplete: boolean;
   suggestedGrade: string | null;
   finalGrade: string | null;
+  status: string;
   isMgmtRole: boolean;
   teacher?: { name: string; loginAccount: string };
 }
@@ -273,6 +303,7 @@ export interface TeacherResult {
     loginAccount: string;
     department: string | null;
   } | null;
+  published?: boolean;
   final: FinalResultRow | null;
   dimension: DimensionResultRow | null;
   flags: FlagRow[];
@@ -509,6 +540,43 @@ export const api = {
     a.click();
     URL.revokeObjectURL(url);
   },
+
+  // ── 成绩审核会签（M8）──
+  initiatePublish: (year: string, token: string) =>
+    request<{ id: string }>(
+      `/approval/publish?year=${year}`,
+      { method: 'POST' },
+      token,
+    ),
+  initiateGradeChange: (
+    payload: {
+      teacherId: string;
+      academicYear: string;
+      newGrade: string;
+      reason: string;
+    },
+    token: string,
+  ) =>
+    request<{ id: string }>(
+      '/approval/grade-change',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+  approvalPending: (token: string) =>
+    request<PendingApproval[]>('/approval/pending', {}, token),
+  approvalVote: (
+    id: string,
+    decision: 'AGREE' | 'REJECT',
+    opinion: string,
+    token: string,
+  ) =>
+    request<{ status: string }>(
+      `/approval/${id}/vote`,
+      { method: 'POST', body: JSON.stringify({ decision, opinion }) },
+      token,
+    ),
+  approvalList: (year: string, token: string) =>
+    request<ApprovalRequestRow[]>(`/approval?year=${year}`, {}, token),
 
   // ── 学生评教（M6）──
   studentMyTeachers: (year: string, token: string) =>

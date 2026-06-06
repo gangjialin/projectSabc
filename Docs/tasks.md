@@ -154,12 +154,8 @@
 - [x] **T-801** 管理员仪表盘 `/admin/dashboard` ｜FE｜4pd｜依赖：T-406,T-409 ✅ 概览卡(参评/否决/不完整/中层)+等级分布+全院排名表+一键全院重算；新增 `GET /score/results`、`/score/veto-list`
 - [x] **T-802** 教师个人成绩单 `/teacher/my-result` ｜FE｜3pd｜依赖：T-409 ✅ 综合分+建议等级+排名+三维子项明细+**零依赖 SVG 5维度雷达图**(70%否决线、<70%维度标红且带⚠不靠单一颜色)+否决告警；新增 `GET /score/my-result`、`/score/teacher/:id/result`
 - [/] **T-803** 报表导出服务 ReportService ｜BE｜4pd｜依赖：T-409 ✅ Excel 导出：`GET /report/ranking`（Sheet1 综合排名+三维子项+否决+完整性；Sheet2 5维度加权得分率）；仪表盘"导出排名Excel"按钮。待补：PDF、信度效度分析、学校上报包格式
-- [ ] **T-804** 审核→发布闭环（会签制）｜BE+FE｜4pd｜依赖：T-409,T-706
-  - 审核委员会(User.isApprover) 全票会签才发布；新表 ApprovalRequest(发布/修改 两类)
-  - 禁止单人改成绩/基础数据，改动须走变更申请+全票同意；独立审签记录留痕
-  - 教师成绩可见性门禁(仅 PUBLISHED 可见)；结果公示(≥3 工作日)联动申诉
-- [ ] **T-805** 成绩单强弱诊断 ｜FE｜1pd｜依赖：T-802
-  - 按 5 维度得分率规则化生成文字诊断(最强/最弱维度、<70% 否决预警、对应改进建议)
+- [x] **T-804** 审核→发布闭环（会签制）｜BE+FE｜4pd｜依赖：T-409 ✅ 审核委员会(isApprover)全票会签才发布/改等级；`ApprovalRequest`/`ApprovalVote` 留痕；`/admin/results`(发起发布/改等级+审签记录)、`/approval`(委员投票)；教师成绩单 PUBLISHED 前门禁。待补：公示≥3工作日计时联动申诉
+- [x] **T-805** 成绩单强弱诊断 ｜FE｜1pd｜依赖：T-802 ✅ shared `diagnose()` 规则化(最强/最弱维度、<70%否决预警、对应改进建议，+4测试)；`/teacher/my-result` 展示诊断与建议
 
 ---
 

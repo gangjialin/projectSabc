@@ -8,6 +8,7 @@ interface NavItem {
   href: string;
   label: string;
   roles: string[]; // 任一命中即显示
+  approverOnly?: boolean; // 仅审核委员会成员可见
 }
 
 /** 导航项 —— roles 用 RoleCode 字符串。一人多角色时显示并集 */
@@ -18,6 +19,8 @@ const NAV: NavItem[] = [
   { href: '/admin/questions', label: '题目管理', roles: ['ADMIN'] },
   { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/sayke', label: '说课控制台', roles: ['ADMIN', 'DEAN'] },
+  { href: '/admin/results', label: '成绩管理/发布', roles: ['ADMIN', 'DEAN'] },
+  { href: '/approval', label: '成绩会签', roles: [], approverOnly: true },
   { href: '/reviewer/evaluate', label: '我的评分任务', roles: ['REVIEWER', 'DEAN'] },
   { href: '/teacher/course-report', label: '参评课程填报', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/my-result', label: '我的成绩单', roles: ['TEACHER', 'DEAN'] },
@@ -33,6 +36,7 @@ export function Chrome({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [roles, setRoles] = useState<string[]>([]);
   const [name, setName] = useState('');
+  const [isApprover, setIsApprover] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -40,9 +44,11 @@ export function Chrome({ children }: { children: React.ReactNode }) {
       const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
         roles?: string[];
         name?: string;
+        isApprover?: boolean;
       };
       setRoles(u.roles ?? []);
       setName(u.name ?? '');
+      setIsApprover(u.isApprover ?? false);
     } catch {
       setRoles([]);
     }
@@ -58,7 +64,11 @@ export function Chrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  const items = NAV.filter((i) => i.roles.some((r) => roles.includes(r)));
+  const items = NAV.filter(
+    (i) =>
+      i.roles.some((r) => roles.includes(r)) ||
+      (i.approverOnly && isApprover),
+  );
 
   function logout() {
     localStorage.removeItem('token');

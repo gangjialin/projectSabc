@@ -43,6 +43,7 @@ export class AuthService {
         account: user.loginAccount,
         userType: user.userType,
         roles,
+        isApprover: user.isApprover,
       },
     };
   }

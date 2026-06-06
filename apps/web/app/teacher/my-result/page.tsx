@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { DIMENSION_NAMES, type DimensionNo } from '@app/shared';
+import { DIMENSION_NAMES, diagnose, type DimensionNo } from '@app/shared';
 import { api, type TeacherResult } from '@/lib/api';
 import { RadarChart, type RadarAxis } from '@/components/RadarChart';
 
@@ -43,7 +43,11 @@ export default function MyResultPage() {
     try {
       const res = await api.myResult(year, getToken());
       setData(res);
-      if (!res.final) setMessage('暂无该学年的评价结果');
+      if (res.published === false) {
+        setMessage('成绩评定中，发布后即可查看本人成绩单。');
+      } else if (!res.final) {
+        setMessage('暂无该学年的评价结果');
+      }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : '加载失败');
     } finally {
@@ -62,6 +66,14 @@ export default function MyResultPage() {
 
   const final = data?.final;
   const grade = final?.finalGrade ?? final?.suggestedGrade ?? null;
+
+  const weighted = {} as Record<DimensionNo, number | null>;
+  DIM_NOS.forEach((n) => {
+    weighted[n] = dim
+      ? ((dim[`dim${n}WeightedRate` as keyof typeof dim] as number | null) ?? null)
+      : null;
+  });
+  const diag = dim ? diagnose(weighted) : null;
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
@@ -152,6 +164,26 @@ export default function MyResultPage() {
                 5 维度加权得分率（虚线为 70% 否决线）
               </h2>
               <RadarChart axes={axes} threshold={0.7} />
+            </section>
+          )}
+
+          {/* 强弱诊断 */}
+          {diag && (
+            <section className="space-y-2 rounded-lg border bg-slate-50 p-4">
+              <h2 className="text-sm font-medium text-slate-600">评价诊断</h2>
+              <p className="text-sm leading-relaxed text-slate-700">
+                {diag.summary}
+              </p>
+              {diag.suggestions.length > 0 && (
+                <div className="space-y-1 pt-1">
+                  <div className="text-sm font-medium text-slate-600">改进建议</div>
+                  <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                    {diag.suggestions.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
           )}
         </>
