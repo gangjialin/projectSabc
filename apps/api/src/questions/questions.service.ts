@@ -1,11 +1,26 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import {
   CourseType,
+  DIMENSION_NAMES,
   FormType,
   validateTemplate,
+  type DimensionNo,
   type DimensionShape,
 } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { DIMENSION_META } from './form-definitions';
+
+/** Excel 单元格取值 → 字符串 */
+function cellStr(v: ExcelJS.CellValue): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object' && 'text' in v) return String(v.text).trim();
+  return String(v).trim();
+}
+function cellNum(v: ExcelJS.CellValue): number {
+  const s = cellStr(v);
+  return s === '' ? NaN : Number(s);
+}
 
 @Injectable()
 export class QuestionsService {
@@ -115,6 +130,136 @@ export class QuestionsService {
         },
         include: { dimensions: { include: { questions: true } } },
       });
+    });
+  }
+
+  /**
+   * 导出题目为 Excel（T-304 批量）：有生效模板则导出其全部题目，
+   * 否则导出标准 5 维度空白骨架，供管理员填写后回传。
+   */
+  async exportTemplateExcel(
+    formType: FormType,
+    courseType?: CourseType,
+  ): Promise<Buffer> {
+    const tpl = await this.getActiveTemplate(formType, courseType).catch(
+      () => null,
+    );
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('题目');
+    ws.columns = [
+      { header: '维度编号', key: 'dimNo', width: 10 },
+      { header: '维度名称', key: 'dimName', width: 16 },
+      { header: '维度满分', key: 'dimMax', width: 10 },
+      { header: '评价指标', key: 'indicator', width: 44 },
+      { header: '评分要点', key: 'criteria', width: 44 },
+      { header: '题目分值', key: 'score', width: 10 },
+    ];
+    ws.getRow(1).font = { bold: true };
+
+    if (tpl) {
+      for (const d of tpl.dimensions) {
+        for (const q of d.questions) {
+          ws.addRow({
+            dimNo: d.dimensionNo,
+            dimName: d.name,
+            dimMax: d.maxScore,
+            indicator: q.indicator,
+            criteria: q.scoreCriteria,
+            score: q.maxScore,
+          });
+        }
+      }
+    } else {
+      for (const dim of DIMENSION_META) {
+        ws.addRow({
+          dimNo: dim.no,
+          dimName: dim.name,
+          dimMax: dim.max,
+          indicator: '（在此填写评价指标）',
+          criteria: '',
+          score: dim.max,
+        });
+      }
+    }
+
+    // 填表说明
+    const note = wb.addWorksheet('填写说明');
+    note.addRow(['填写规则']);
+    note.addRow(['1. 每行一道题；同一维度可多行，维度编号/名称/满分填一致即可']);
+    note.addRow(['2. 同一维度下所有题目的「题目分值」之和必须等于该维度满分']);
+    note.addRow(['3. 维度满分固定：1=20 2=25 3=20 4=20 5=15，合计 100']);
+    note.addRow(['4. 评分要点可留空，留空时默认与评价指标相同']);
+    note.addRow(['5. 上传后系统会校验，不合规会拒绝并提示原因']);
+
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  /**
+   * 从 Excel 导入题目（T-304 批量）：解析 → 按维度分组 → 复用 saveTemplate
+   * （含合规校验与自动升版本）。
+   */
+  async importTemplateExcel(
+    formType: FormType,
+    courseType: CourseType | undefined,
+    buffer: Buffer,
+  ) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) throw new BadRequestException('文件为空或格式不正确');
+
+    const byDim = new Map<
+      number,
+      {
+        name: string;
+        max: number;
+        questions: { indicator: string; scoreCriteria: string; maxScore: number }[];
+      }
+    >();
+
+    ws.eachRow((row, idx) => {
+      if (idx === 1) return; // 表头
+      const dimNo = cellNum(row.getCell(1).value);
+      const indicator = cellStr(row.getCell(4).value);
+      if (!dimNo || !indicator) return; // 跳过空行/占位说明行
+      const dimName = cellStr(row.getCell(2).value);
+      const dimMax = cellNum(row.getCell(3).value);
+      const criteria = cellStr(row.getCell(5).value) || indicator;
+      const score = cellNum(row.getCell(6).value);
+
+      if (!byDim.has(dimNo)) {
+        byDim.set(dimNo, {
+          name: dimName || DIMENSION_NAMES[dimNo as DimensionNo] || `维度${dimNo}`,
+          max: dimMax,
+          questions: [],
+        });
+      }
+      byDim.get(dimNo)!.questions.push({
+        indicator,
+        scoreCriteria: criteria,
+        maxScore: score,
+      });
+    });
+
+    if (byDim.size === 0) {
+      throw new BadRequestException('未解析到任何题目，请检查表格内容');
+    }
+
+    const dimensions = [...byDim.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([no, d]) => ({
+        dimensionNo: no,
+        name: d.name,
+        maxScore: d.max,
+        questions: d.questions,
+      }));
+
+    return this.saveTemplate({
+      formType,
+      courseType: courseType ?? null,
+      description: 'Excel 批量导入',
+      dimensions,
     });
   }
 }

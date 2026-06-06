@@ -79,7 +79,14 @@ export default function ImportPage() {
         </select>
 
         <button
-          onClick={() => void api.downloadTemplate(kind, getToken())}
+          onClick={async () => {
+            setMessage(null);
+            try {
+              await api.downloadTemplate(kind, getToken());
+            } catch (e) {
+              setMessage(e instanceof Error ? e.message : '模板下载失败');
+            }
+          }}
           className="rounded-md border px-3 py-2 text-sm hover:bg-slate-100"
         >
           下载模板

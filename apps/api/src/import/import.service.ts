@@ -34,6 +34,24 @@ export class ImportService {
       width: 18,
     }));
     ws.getRow(1).font = { bold: true };
+
+    // 示例行：演示各列的填写格式（导入前请删除本行）
+    const example: Record<string, string> = {};
+    for (const c of columns) {
+      if (c.type === 'enum' && c.enumMap) {
+        example[c.field] = Object.keys(c.enumMap)[0] ?? '';
+      } else if (c.type === 'bool') {
+        example[c.field] = '是';
+      } else if (c.type === 'list') {
+        example[c.field] = '班级A;班级B';
+      } else if (c.field === 'loginAccount' || c.field === 'courseCode') {
+        example[c.field] = '示例编号(导入前删除本行)';
+      } else {
+        example[c.field] = '示例';
+      }
+    }
+    ws.addRow(example);
+
     const buf = await wb.xlsx.writeBuffer();
     return Buffer.from(buf);
   }

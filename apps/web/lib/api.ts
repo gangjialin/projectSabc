@@ -417,6 +417,36 @@ export const api = {
       { method: 'POST', body: JSON.stringify(input) },
       token,
     ),
+  importQuestions: (
+    formType: string,
+    file: File,
+    token: string,
+    courseType?: string,
+  ) =>
+    upload<AdminTemplate>(
+      `/questions/import?formType=${formType}${courseType ? `&courseType=${courseType}` : ''}`,
+      file,
+      token,
+    ),
+  /** 下载题目 Excel（批量编辑用） */
+  exportQuestions: async (
+    formType: string,
+    token: string,
+    courseType?: string,
+  ) => {
+    const res = await fetch(
+      `${BASE_URL}/questions/export?formType=${formType}${courseType ? `&courseType=${courseType}` : ''}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`题目导出失败 (${res.status})`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `questions_${formType}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   // ── 课程 / 用户（任务分配选择源）──
   listCourses: (token: string, year?: string) =>

@@ -287,6 +287,58 @@ export default function QuestionsAdminPage() {
           >
             空白模板
           </button>
+
+          <span className="mx-1 text-slate-300">|</span>
+
+          <button
+            onClick={async () => {
+              setMessage(null);
+              try {
+                await api.exportQuestions(
+                  formType,
+                  getToken(),
+                  courseType || undefined,
+                );
+              } catch (e) {
+                setMessage(e instanceof Error ? e.message : '导出失败');
+              }
+            }}
+            className="rounded-md border px-3 py-2 text-sm hover:bg-slate-100"
+          >
+            下载题目 Excel
+          </button>
+
+          <label className="cursor-pointer rounded-md border px-3 py-2 text-sm hover:bg-slate-100">
+            上传题目 Excel
+            <input
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ''; // 允许重复选同一文件
+                if (!file) return;
+                setMessage(null);
+                setBusy(true);
+                try {
+                  const saved = await api.importQuestions(
+                    formType,
+                    file,
+                    getToken(),
+                    courseType || undefined,
+                  );
+                  setMessage(
+                    `Excel 导入成功：${formType} v${saved.version} 已生效（旧版自动停用）`,
+                  );
+                  await loadList();
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : '导入失败');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          </label>
         </div>
 
         {/* 合计校验提示 */}
