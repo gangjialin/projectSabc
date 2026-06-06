@@ -2,6 +2,9 @@
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000/api/v1';
 
+/** WebSocket 源（去掉 /api/v1 前缀），用于 socket.io 连接 /sayke 命名空间 */
+export const SOCKET_URL = BASE_URL.replace(/\/api\/v1\/?$/, '');
+
 export interface ApiResponse<T> {
   code: number;
   message: string;
@@ -141,6 +144,36 @@ export interface BatchAssignResult {
     reviewerId: string;
     message: string;
   }[];
+}
+
+// ── 说课场次（M5）──
+export interface SaykeSessionTeacher {
+  id: string;
+  orderNo: number;
+  status: string;
+  teacherId: string;
+  teacherName: string;
+  courseId: string;
+  courseName: string;
+}
+export interface SaykeSession {
+  id: string;
+  name: string;
+  scheduledDate: string;
+  academicYear: string;
+  status: string;
+  currentTeacherId: string | null;
+  teachers: SaykeSessionTeacher[];
+}
+export interface SaykeLive {
+  teacherId: string;
+  count: number;
+  avgTotal: number | null;
+  dims: Record<string, number | null>;
+}
+export interface SaykeStatePayload {
+  session: SaykeSession;
+  live: SaykeLive | null;
 }
 
 // ── 评价结果 / 成绩单（M8）──
@@ -285,6 +318,36 @@ export const api = {
     request<{ id: string; totalScore: number }>(
       '/evaluation/submit',
       { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+
+  // ── 说课场次（M5）──
+  saykeGet: (id: string, token: string) =>
+    request<SaykeStatePayload>(`/sayke/${id}`, {}, token),
+  saykeCreate: (
+    body: {
+      name: string;
+      scheduledDate: string;
+      academicYear: string;
+      teachers: { teacherId: string; courseId: string }[];
+    },
+    token: string,
+  ) =>
+    request<SaykeSession>(
+      '/sayke',
+      { method: 'POST', body: JSON.stringify(body) },
+      token,
+    ),
+  saykeSetCurrent: (id: string, sessionTeacherId: string, token: string) =>
+    request<{ ok: boolean }>(
+      `/sayke/${id}/current`,
+      { method: 'POST', body: JSON.stringify({ sessionTeacherId }) },
+      token,
+    ),
+  saykeLock: (id: string, token: string) =>
+    request<{ ok: boolean }>(
+      `/sayke/${id}/lock`,
+      { method: 'POST' },
       token,
     ),
 

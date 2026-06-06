@@ -99,18 +99,11 @@
 
 > 目标：WebSocket 现场打分，大屏含 5 维度实时雷达，≥100 人并发、延迟≤3 秒。
 
-- [ ] **T-501** 说课场次建模 ｜BE+DB｜2pd｜依赖：T-201
-  - `SaykeSession`、`SessionTeacher`(顺序/状态)；管理员创建场次、生成进入二维码
-- [ ] **T-502** RealtimeGateway 实时网关 ｜BE｜4pd｜依赖：T-501,T-307
-  - Socket.IO `/sayke` namespace；提交→写 DB + 更新 Redis 聚合（含 5 维度得分率）+ 广播
-  - Redis key 结构：`session:{sid}:teacher:{tid}:dim{n}:rates` 等（设计 §4.3）
-- [ ] **T-503** 同行打分移动端 `/peer/session/[code]` ｜FE｜3pd｜依赖：T-502,T-308
-  - 扫码进入、移动端友好、5 维度李克特、不得为自己打分、提交锁定
-  - 本地缓存 + 断线重连 + 离线补录（风险对策）
-- [ ] **T-504** 大屏实时显示 `/display/session/[id]` ｜FE｜3pd｜依赖：T-502
-  - 当前说课教师、已提交进度、实时去极值均分、**5 维度实时雷达图**
-- [ ] **T-505** 并发与延迟压测 ｜BE｜2pd｜依赖：T-502
-  - 100+ 并发提交、广播延迟≤3 秒验证
+- [x] **T-501** 说课场次建模 ｜BE+DB｜2pd｜依赖：T-201 ✅ `SaykeService` 创建场次+教师顺序、`getSession`(含教师/课程名)、`setCurrent`/`lockCurrent` 推进流程；REST `POST /sayke`、`GET /sayke/:id`、`/:id/current`、`/:id/lock`
+- [x] **T-502** RealtimeGateway 实时网关 ｜BE｜4pd｜依赖：T-501,T-307 ✅ Socket.IO `/sayke` namespace；握手 JWT 鉴权；`join`/`score` 事件；score 复用 EvaluationService(算5维度快照+不得评自己+提交锁定)→广播 `live`(去极值均分+5维度率)；状态变更广播 `state`。注：实时聚合用 DB 重算(正确优先)，Redis 增量优化后续接
+- [x] **T-503** 同行打分移动端 `/peer/session/[code]` ｜FE｜3pd｜依赖：T-502,T-308 ✅ socket 连接+join；当前说课教师展示；复用 EvaluationForm(只显文字)；不得为自己打分；提交后锁定等下一位；随 `state` 自动切换教师。注：离线补录后续
+- [x] **T-504** 大屏实时显示 `/display/session/[id]` ｜FE｜3pd｜依赖：T-502 ✅ 深色大屏：当前教师/课程、实时去极值均分、已提交数、**5 维度实时雷达图**(70%否决线)；listen `live`/`state`
+- [ ] **T-505** 并发与延迟压测 ｜BE｜2pd｜依赖：T-502 — 待服务器环境用 k6/Artillery 压 100+ 并发、验证广播≤3 秒
 
 ---
 
