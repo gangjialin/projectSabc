@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Chrome } from '@/components/Chrome';
 
 export const metadata: Metadata = {
   title: '教师课程教学质量评分系统',
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        {children}
+        <Chrome>{children}</Chrome>
       </body>
     </html>
   );

@@ -41,9 +41,8 @@
 - [x] **T-105** RBAC 权限控制 ｜BE｜2pd｜依赖：T-104 ✅ RolesGuard + @Roles 装饰器，后端强制鉴权；细粒度权限矩阵随各模块补全
 - [ ] **T-106** AuditLog 审计日志基础设施 ｜BE｜2pd｜依赖：T-103
   - 敏感操作统一拦截器/装饰器记录（解锁评分、改等级、建标记等）
-- [ ] **T-107** 前端基础框架 ｜FE｜3pd｜依赖：T-101,T-104
-  - shadcn/ui + Tailwind 主题；登录页；按角色的路由分组骨架（7 端壳）
-  - Zustand(会话) + TanStack Query(服务端缓存)；typed API client；统一 loading/empty/error 态
+- [/] **T-107** 前端基础框架 ｜FE｜3pd｜依赖：T-101,T-104 ✅ 单点登录 + **左侧角色导航壳 `Chrome`**(按角色显示入口、全屏页/未登录不套壳)+ typed API client + localStorage 会话 + 401 自动跳登录。待补：shadcn/ui 组件化、统一 loading/empty 态
+  - 注：原"7 端"= 同一应用按角色显示不同导航/内容（非多登录端，已对齐 requirements 附录）
 - [ ] **T-108** CI 流水线 ｜INFRA｜1pd｜依赖：T-101
   - lint + typecheck + unit test 自动化（PR 必过）
 
