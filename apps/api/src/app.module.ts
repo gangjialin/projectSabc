@@ -13,6 +13,7 @@ import { EvaluationModule } from './evaluation/evaluation.module';
 import { TasksModule } from './tasks/tasks.module';
 import { ReportModule } from './report/report.module';
 import { SaykeModule } from './sayke/sayke.module';
+import { HealthController } from './health/health.controller';
 
 /**
  * 根模块。后续按 design §2.2 模块划分逐步加入：
@@ -43,5 +44,6 @@ import { SaykeModule } from './sayke/sayke.module';
     ReportModule,
     SaykeModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
