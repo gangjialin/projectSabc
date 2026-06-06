@@ -187,6 +187,21 @@ export interface ReportCourseInput {
   isCourseOwner?: boolean;
 }
 
+// ── 个别访谈（M7 / T-701）──
+export interface InterviewRow {
+  id: string;
+  courseId: string;
+  teacherId: string;
+  teacherName: string;
+  courseName: string;
+  academicYear: string;
+  selectedStudentIds: string[];
+  interviewDate: string | null;
+  status: string;
+  scoreCount: number;
+  myScored?: boolean;
+}
+
 // ── 学生评价免计入申请（M6）──
 export interface ReviewStamp {
   status: 'AGREE' | 'REJECT';
@@ -601,6 +616,41 @@ export const api = {
     ),
   approvalList: (year: string, token: string) =>
     request<ApprovalRequestRow[]>(`/approval?year=${year}`, {}, token),
+
+  // ── 个别访谈（M7）──
+  createInterview: (
+    payload: {
+      courseId: string;
+      academicYear?: string;
+      selectedStudentIds: string[];
+      interviewDate?: string;
+    },
+    token: string,
+  ) =>
+    request<InterviewRow>(
+      '/interview',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+  listInterviews: (year: string, token: string) =>
+    request<InterviewRow[]>(`/interview?year=${year}`, {}, token),
+  interviewsAssigned: (token: string) =>
+    request<InterviewRow[]>('/interview/assigned', {}, token),
+  scoreInterview: (
+    id: string,
+    payload: {
+      capabilityScore: number;
+      methodScore: number;
+      assessmentScore: number;
+      comment?: string;
+    },
+    token: string,
+  ) =>
+    request<{ id: string }>(
+      `/interview/${id}/score`,
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
 
   // ── 免计入申请（M6）──
   createExemption: (

@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { href: '/admin/questions', label: '题目管理', roles: ['ADMIN'] },
   { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/sayke', label: '说课控制台', roles: ['ADMIN', 'DEAN'] },
+  { href: '/admin/interview', label: '访谈管理', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/results', label: '成绩管理/发布', roles: ['ADMIN', 'DEAN'] },
   { href: '/approval', label: '成绩会签', roles: [], approverOnly: true },
   {
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
     roles: ['ADMIN', 'DEAN', 'QUALITY_DEPT'],
   },
   { href: '/reviewer/evaluate', label: '我的评分任务', roles: ['REVIEWER', 'DEAN'] },
+  { href: '/interviewer/score', label: '我的访谈评分', roles: ['INTERVIEWER', 'DEAN'] },
   { href: '/teacher/course-report', label: '参评课程填报', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/exemption', label: '免计入申请', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/my-result', label: '我的成绩单', roles: ['TEACHER', 'DEAN'] },
