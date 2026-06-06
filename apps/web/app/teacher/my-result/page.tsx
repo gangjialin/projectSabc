@@ -7,7 +7,7 @@ import { RadarChart, type RadarAxis } from '@/components/RadarChart';
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('token') ?? '';
+  return localStorage.getItem('token') ?? '';
 }
 
 const DIM_NOS: DimensionNo[] = [1, 2, 3, 4, 5];

@@ -11,7 +11,7 @@ import {
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('token') ?? '';
+  return localStorage.getItem('token') ?? '';
 }
 
 interface TeacherRow {

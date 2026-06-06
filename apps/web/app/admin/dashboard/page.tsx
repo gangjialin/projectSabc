@@ -5,7 +5,7 @@ import { api, type FinalResultRow } from '@/lib/api';
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('token') ?? '';
+  return localStorage.getItem('token') ?? '';
 }
 
 const GRADES = ['S', 'A', 'B', 'C', 'D'] as const;

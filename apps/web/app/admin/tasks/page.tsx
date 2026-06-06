@@ -13,7 +13,7 @@ import {
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('token') ?? '';
+  return localStorage.getItem('token') ?? '';
 }
 
 const TASK_TYPES: { value: TaskType; label: string }[] = [

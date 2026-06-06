@@ -23,6 +23,16 @@ export interface LoginResult {
   };
 }
 
+/** 登录态失效统一处理：清除令牌并跳回登录页 */
+function handle401() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -36,6 +46,10 @@ async function request<T>(
       ...options.headers,
     },
   });
+  if (res.status === 401) {
+    handle401();
+    throw new Error('登录已过期，请重新登录');
+  }
   const body = (await res.json()) as ApiResponse<T>;
   if (!res.ok || body.code !== 0) {
     throw new Error(body.message || `请求失败 (${res.status})`);
@@ -286,6 +300,10 @@ async function upload<T>(
     body: form,
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  if (res.status === 401) {
+    handle401();
+    throw new Error('登录已过期，请重新登录');
+  }
   const body = (await res.json()) as ApiResponse<T>;
   if (!res.ok || body.code !== 0) {
     throw new Error(body.message || `上传失败 (${res.status})`);
@@ -384,6 +402,10 @@ export const api = {
     const res = await fetch(`${BASE_URL}/report/ranking?year=${year}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 401) {
+      handle401();
+      throw new Error('登录已过期，请重新登录');
+    }
     if (!res.ok) throw new Error(`报表下载失败 (${res.status})`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -438,6 +460,10 @@ export const api = {
       `${BASE_URL}/questions/export?formType=${formType}${courseType ? `&courseType=${courseType}` : ''}`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
+    if (res.status === 401) {
+      handle401();
+      throw new Error('登录已过期，请重新登录');
+    }
     if (!res.ok) throw new Error(`题目导出失败 (${res.status})`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -486,6 +512,10 @@ export const api = {
     const res = await fetch(`${BASE_URL}/import/template/${kind}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 401) {
+      handle401();
+      throw new Error('登录已过期，请重新登录');
+    }
     if (!res.ok) throw new Error(`模板下载失败 (${res.status})`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

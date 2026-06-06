@@ -13,12 +13,12 @@ import { EvaluationForm } from '@/components/EvaluationForm';
 
 function getToken(): string {
   if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('token') ?? '';
+  return localStorage.getItem('token') ?? '';
 }
 function getUserId(): string {
   if (typeof window === 'undefined') return '';
   try {
-    return (JSON.parse(sessionStorage.getItem('user') ?? '{}') as { id?: string })
+    return (JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string })
       .id ?? '';
   } catch {
     return '';

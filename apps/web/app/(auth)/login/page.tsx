@@ -18,8 +18,8 @@ export default function LoginPage() {
     try {
       const res = await api.login(account, password);
       // 演示：实际应存入安全存储 + 全局状态（Zustand）
-      sessionStorage.setItem('token', res.accessToken);
-      sessionStorage.setItem('user', JSON.stringify(res.user));
+      localStorage.setItem('token', res.accessToken);
+      localStorage.setItem('user', JSON.stringify(res.user));
       router.push(res.mustChangePwd ? '/change-password' : '/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败');
