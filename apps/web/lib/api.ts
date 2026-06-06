@@ -160,6 +160,32 @@ export interface BatchAssignResult {
   }[];
 }
 
+// ── 教师课程填报 ──
+export interface CourseReport {
+  id: string;
+  courseCode: string;
+  name: string;
+  type: string;
+  level: string;
+  classNames: string[];
+  academicYear: string;
+  semester: string;
+  isReformCourse: boolean;
+  isTargetCourse: boolean;
+  teacherId: string;
+}
+export interface ReportCourseInput {
+  courseCode: string;
+  name: string;
+  type: string;
+  level: string;
+  classNames: string[];
+  academicYear: string;
+  semester: string;
+  isReformCourse?: boolean;
+  isCourseOwner?: boolean;
+}
+
 // ── 说课场次（M5）──
 export interface SaykeSessionTeacher {
   id: string;
@@ -473,6 +499,20 @@ export const api = {
     a.click();
     URL.revokeObjectURL(url);
   },
+
+  // ── 教师课程填报 ──
+  getMyCourseReport: (year: string, token: string) =>
+    request<CourseReport | null>(
+      `/courses/my-report?year=${year}`,
+      {},
+      token,
+    ),
+  reportCourse: (input: ReportCourseInput, token: string) =>
+    request<CourseReport>(
+      '/courses/report',
+      { method: 'POST', body: JSON.stringify(input) },
+      token,
+    ),
 
   // ── 课程 / 用户（任务分配选择源）──
   listCourses: (token: string, year?: string) =>
