@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/sayke', label: '说课控制台', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/interview', label: '访谈管理', roles: ['ADMIN', 'DEAN'] },
+  { href: '/admin/flags', label: '前置限定', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/results', label: '成绩管理/发布', roles: ['ADMIN', 'DEAN'] },
   { href: '/approval', label: '成绩会签', roles: [], approverOnly: true },
   {
