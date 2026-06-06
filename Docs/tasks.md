@@ -138,10 +138,8 @@
   - 系部主任专项听课记录、下周期专项评估、校院两级审批/备案
 - [ ] **T-705** 跟踪单前端 ｜FE｜3pd｜依赖：T-704
   - 管理 `/admin/tracking`、教师 `/teacher/tracking`；进度提醒、归档查询(≥5 年)
-- [ ] **T-706** 申诉受理 AppealService ｜BE+DB｜3pd｜依赖：T-406
-  - `Appeal`(院级+校级)；公示后 3 工作日内提交，3 工作日内复核；时限提醒、归档
-- [ ] **T-707** 申诉前端 ｜FE｜2pd｜依赖：T-706
-  - 教师 `/teacher/appeal` 提交；管理 `/admin/appeals` 处理队列
+- [x] **T-706** 申诉受理 AppealService ｜BE+DB｜3pd ✅ 院级(学院秘书组)→不服升校级(质保部);成绩须已发布才可诉;3工作日时限(deadline);归档
+- [x] **T-707** 申诉前端 ｜FE｜2pd ✅ 教师 /teacher/appeal 提交+追踪+升校级;管理 /admin/appeals 院级/校级队列受理/驳回
 
 ---
 

@@ -187,6 +187,28 @@ export interface ReportCourseInput {
   isCourseOwner?: boolean;
 }
 
+// ── 申诉（M7 / T-706）──
+export interface AppealProcessStamp {
+  processor: string;
+  result: 'ACCEPTED' | 'REJECTED';
+  opinion?: string;
+  processedAt: string;
+}
+export interface AppealRow {
+  id: string;
+  teacherId: string;
+  teacherName?: string;
+  academicYear: string;
+  appealLevel: 'COLLEGE' | 'UNIVERSITY';
+  reason: string;
+  status: 'SUBMITTED' | 'PROCESSING' | 'ACCEPTED' | 'REJECTED' | 'CLOSED';
+  collegeProcess: AppealProcessStamp | null;
+  universityProcess: AppealProcessStamp | null;
+  submittedAt: string;
+  deadline: string;
+}
+export type AppealLevel = 'COLLEGE' | 'UNIVERSITY';
+
 // ── 个别访谈（M7 / T-701）──
 export interface InterviewRow {
   id: string;
@@ -616,6 +638,38 @@ export const api = {
     ),
   approvalList: (year: string, token: string) =>
     request<ApprovalRequestRow[]>(`/approval?year=${year}`, {}, token),
+
+  // ── 申诉（M7）──
+  createAppeal: (
+    payload: { academicYear: string; reason: string },
+    token: string,
+  ) =>
+    request<AppealRow>(
+      '/appeal',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+  myAppeals: (token: string) => request<AppealRow[]>('/appeal/my', {}, token),
+  escalateAppeal: (id: string, reason: string, token: string) =>
+    request<AppealRow>(
+      `/appeal/${id}/escalate`,
+      { method: 'POST', body: JSON.stringify({ reason }) },
+      token,
+    ),
+  appealPending: (level: AppealLevel, token: string) =>
+    request<AppealRow[]>(`/appeal/pending?level=${level}`, {}, token),
+  appealProcess: (
+    id: string,
+    level: AppealLevel,
+    accept: boolean,
+    opinion: string,
+    token: string,
+  ) =>
+    request<AppealRow>(
+      `/appeal/${id}/${level === 'COLLEGE' ? 'college' : 'university'}-process`,
+      { method: 'POST', body: JSON.stringify({ accept, opinion }) },
+      token,
+    ),
 
   // ── 个别访谈（M7）──
   createInterview: (

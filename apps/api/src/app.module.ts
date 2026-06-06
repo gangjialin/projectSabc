@@ -18,6 +18,7 @@ import { StudentModule } from './student/student.module';
 import { ApprovalModule } from './approval/approval.module';
 import { ExemptionModule } from './exemption/exemption.module';
 import { InterviewModule } from './interview/interview.module';
+import { AppealModule } from './appeal/appeal.module';
 
 /**
  * 根模块。后续按 design §2.2 模块划分逐步加入：
@@ -51,6 +52,7 @@ import { InterviewModule } from './interview/interview.module';
     ApprovalModule,
     ExemptionModule,
     InterviewModule,
+    AppealModule,
   ],
   controllers: [HealthController],
 })

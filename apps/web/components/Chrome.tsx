@@ -27,11 +27,17 @@ const NAV: NavItem[] = [
     label: '免计入审核',
     roles: ['ADMIN', 'DEAN', 'QUALITY_DEPT'],
   },
+  {
+    href: '/admin/appeals',
+    label: '申诉处理',
+    roles: ['ADMIN', 'DEAN', 'QUALITY_DEPT'],
+  },
   { href: '/reviewer/evaluate', label: '我的评分任务', roles: ['REVIEWER', 'DEAN'] },
   { href: '/interviewer/score', label: '我的访谈评分', roles: ['INTERVIEWER', 'DEAN'] },
   { href: '/teacher/course-report', label: '参评课程填报', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/exemption', label: '免计入申请', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/my-result', label: '我的成绩单', roles: ['TEACHER', 'DEAN'] },
+  { href: '/teacher/appeal', label: '我的申诉', roles: ['TEACHER', 'DEAN'] },
   { href: '/student/survey', label: '学生评教', roles: ['STUDENT'] },
 ];
 
