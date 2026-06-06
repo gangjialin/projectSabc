@@ -609,6 +609,7 @@ model StudentEvalAudit {
   teacherId    String
   courseId     String
   academicYear String
+  submissionId String? // 关联的匿名 EvalSubmission，用于免计入精确剔除（仅系统/管理可见）
   submittedAt  DateTime @default(now())
 
   @@unique([studentId, teacherId, courseId, academicYear])

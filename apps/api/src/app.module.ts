@@ -16,6 +16,7 @@ import { SaykeModule } from './sayke/sayke.module';
 import { HealthController } from './health/health.controller';
 import { StudentModule } from './student/student.module';
 import { ApprovalModule } from './approval/approval.module';
+import { ExemptionModule } from './exemption/exemption.module';
 
 /**
  * 根模块。后续按 design §2.2 模块划分逐步加入：
@@ -47,6 +48,7 @@ import { ApprovalModule } from './approval/approval.module';
     SaykeModule,
     StudentModule,
     ApprovalModule,
+    ExemptionModule,
   ],
   controllers: [HealthController],
 })

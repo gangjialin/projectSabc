@@ -52,12 +52,14 @@ export class ScoreService {
     formTypes: FormType[],
     peerTrim: boolean,
     config: EvalConfig,
+    excludeIds: string[] = [],
   ): Promise<Record<DimensionNo, number | null>> {
     const subs = await this.prisma.evalSubmission.findMany({
       where: {
         evaluateeTeacherId: teacherId,
         academicYear,
         formType: { in: formTypes },
+        ...(excludeIds.length ? { id: { notIn: excludeIds } } : {}),
       },
       select: {
         dim1Rate: true,
@@ -82,11 +84,48 @@ export class ScoreService {
   }
 
   /**
+   * 已通过免计入申请、应从学生评价中剔除的匿名提交 id（T-605）。
+   * 经 StudentEvalAudit.submissionId 链接，剔除特定学生那条记录而不破坏匿名。
+   */
+  private async exemptedSubmissionIds(
+    teacherId: string,
+    academicYear: string,
+  ): Promise<string[]> {
+    const approved = await this.prisma.studentEvalExemption.findMany({
+      where: { teacherId, academicYear, finalStatus: ExemptionStatus.APPROVED },
+      select: { studentId: true, courseId: true },
+    });
+    if (approved.length === 0) return [];
+
+    const accounts = [...new Set(approved.map((a) => a.studentId))];
+    const users = await this.prisma.user.findMany({
+      where: { loginAccount: { in: accounts } },
+      select: { id: true, loginAccount: true },
+    });
+    const idByAccount = new Map(users.map((u) => [u.loginAccount, u.id]));
+    const approvedPairs = new Set(
+      approved.map((a) => `${idByAccount.get(a.studentId) ?? ''}:${a.courseId}`),
+    );
+
+    const audits = await this.prisma.studentEvalAudit.findMany({
+      where: { teacherId, academicYear },
+      select: { studentId: true, courseId: true, submissionId: true },
+    });
+    return audits
+      .filter(
+        (a) =>
+          a.submissionId && approvedPairs.has(`${a.studentId}:${a.courseId}`),
+      )
+      .map((a) => a.submissionId as string);
+  }
+
+  /**
    * 计算某教师 5 维度三维得分率 + 维度否决判定，落库 DimensionResult，
    * 并在触发否决时自动创建 PreConditionFlag(DIM_VETO)（design §4.1 / §7.3）。
    */
   async computeDimensionVeto(teacherId: string, academicYear: string) {
     const config = await this.loadConfig();
+    const exempted = await this.exemptedSubmissionIds(teacherId, academicYear);
 
     const supervisor = await this.aggregateRates(
       teacherId,
@@ -108,6 +147,7 @@ export class ScoreService {
       [FormType.STUDENT],
       false,
       config,
+      exempted,
     );
 
     const rates = {} as Parameters<typeof detectDimensionVeto>[0];
@@ -190,14 +230,24 @@ export class ScoreService {
       select: { isAdminRole: true },
     });
 
+    // 免计入：已通过申请的学生匿名记录需从学生评价中剔除（T-605）
+    const exemptedIds = new Set(
+      await this.exemptedSubmissionIds(teacherId, academicYear),
+    );
+
     // 各来源评分总分（100 分制）
     const subs = await this.prisma.evalSubmission.findMany({
       where: { evaluateeTeacherId: teacherId, academicYear },
-      select: { formType: true, totalScore: true },
+      select: { id: true, formType: true, totalScore: true },
     });
     const totals = (ft: FormType) =>
       subs
-        .filter((s) => s.formType === ft && s.totalScore !== null)
+        .filter(
+          (s) =>
+            s.formType === ft &&
+            s.totalScore !== null &&
+            !(ft === FormType.STUDENT && exemptedIds.has(s.id)),
+        )
         .map((s) => s.totalScore as number);
 
     const lecture = totals(FormType.LECTURE);
@@ -222,11 +272,8 @@ export class ScoreService {
     );
     const interviewAvg = mean(interviewTotals);
 
-    // 免计入：统计已通过条数。NOTE 匿名问卷与学生的剔除关联依赖 T-602 审计表，
-    // 当前 surveyAvg 含全部已提交问卷，待匿名审计落地后再做精确排除。
-    const exemptedCount = await this.prisma.studentEvalExemption.count({
-      where: { teacherId, academicYear, finalStatus: ExemptionStatus.APPROVED },
-    });
+    // 免计入：实际从计算中剔除的匿名记录数（经审计表精确剔除，T-605）
+    const exemptedCount = exemptedIds.size;
     const surveyAvg = mean(survey);
     const studentFinal = studentScore(surveyAvg, interviewAvg, cfg);
 

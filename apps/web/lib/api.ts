@@ -187,6 +187,30 @@ export interface ReportCourseInput {
   isCourseOwner?: boolean;
 }
 
+// ── 学生评价免计入申请（M6）──
+export interface ReviewStamp {
+  status: 'AGREE' | 'REJECT';
+  opinion?: string;
+  reviewedAt: string;
+  reviewerName: string;
+}
+export interface ExemptionRow {
+  id: string;
+  studentId: string;
+  studentName: string;
+  className: string;
+  courseId: string;
+  semester: string;
+  academicYear: string;
+  reason: string;
+  deptChiefReview: ReviewStamp | null;
+  collegeReview: ReviewStamp | null;
+  universityReview: ReviewStamp | null;
+  finalStatus: 'PROCESSING' | 'APPROVED' | 'REJECTED';
+  submittedAt: string;
+}
+export type ExemptionLevel = 'DEPT' | 'COLLEGE' | 'UNIVERSITY';
+
 // ── 成绩审核会签（M8）──
 export interface ApprovalVoteRow {
   memberName: string;
@@ -577,6 +601,40 @@ export const api = {
     ),
   approvalList: (year: string, token: string) =>
     request<ApprovalRequestRow[]>(`/approval?year=${year}`, {}, token),
+
+  // ── 免计入申请（M6）──
+  createExemption: (
+    payload: { studentId: string; courseId: string; reason: string },
+    token: string,
+  ) =>
+    request<ExemptionRow>(
+      '/exemption',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+  myExemptions: (token: string) =>
+    request<ExemptionRow[]>('/exemption/my', {}, token),
+  exemptionPending: (level: ExemptionLevel, token: string) =>
+    request<ExemptionRow[]>(`/exemption/pending?level=${level}`, {}, token),
+  exemptionReview: (
+    id: string,
+    level: ExemptionLevel,
+    agree: boolean,
+    opinion: string,
+    token: string,
+  ) => {
+    const path =
+      level === 'DEPT'
+        ? 'dept-review'
+        : level === 'COLLEGE'
+          ? 'college-review'
+          : 'university-review';
+    return request<ExemptionRow>(
+      `/exemption/${id}/${path}`,
+      { method: 'POST', body: JSON.stringify({ agree, opinion }) },
+      token,
+    );
+  },
 
   // ── 学生评教（M6）──
   studentMyTeachers: (year: string, token: string) =>

@@ -89,7 +89,7 @@ export class StudentService {
     }
 
     // 匿名提交（evaluation.submit 对 STUDENT 自动置 evaluatorId=null）
-    await this.evaluation.submit(
+    const submission = await this.evaluation.submit(
       {
         formType: FormType.STUDENT,
         evaluateeTeacherId: dto.teacherId,
@@ -103,12 +103,14 @@ export class StudentService {
       ip,
     );
 
+    // 审计与匿名提交分离，但记录 submissionId 以支持免计入精确剔除（仅系统可见）
     await this.prisma.studentEvalAudit.create({
       data: {
         studentId,
         teacherId: dto.teacherId,
         courseId: dto.courseId,
         academicYear: course.academicYear,
+        submissionId: submission.id,
       },
     });
 
