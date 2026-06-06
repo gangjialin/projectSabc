@@ -110,10 +110,8 @@
 
 > 目标：学生匿名问卷（时间窗口）+ 学生评价记录免计入三级审核。
 
-- [ ] **T-601** 学生问卷端 `/student/survey/[courseId]` ｜FE｜3pd｜依赖：T-308
-  - 学号登录、自动展示所修课程、时间窗口控制、匿名提交、提交锁定
-- [ ] **T-602** 学生匿名保护机制 ｜BE｜3pd｜依赖：T-307
-  - 审计表（StudentEvalAudit）与公开 `EvalSubmission` 分离；教师端只见聚合
+- [x] **T-601** 学生问卷端 `/student/survey` ｜FE｜3pd｜依赖：T-308 ✅ 学号登录 → 按 班级∈授课班级 匹配本学期任课老师 → 待评/已评列表 → 复用 EvaluationForm(只显文字)匿名提交、防重复；时间窗口控制待补
+- [x] **T-602** 学生匿名保护机制 ｜BE｜3pd｜依赖：T-307 ✅ 新表 `StudentEvalAudit` 与匿名 `EvalSubmission` 分离(evaluatorId=null);审计仅记"谁评过谁"用于防重复,教师端只见聚合,无法反查身份
 - [ ] **T-603** 免计入申请建模 ｜BE+DB｜2pd｜依赖：T-201
   - `StudentEvalExemption`(三级审核 Json + finalStatus 枚举)
 - [ ] **T-604** 免计入三级审核服务 ExemptionService ｜BE｜4pd｜依赖：T-603

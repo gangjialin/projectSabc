@@ -186,6 +186,16 @@ export interface ReportCourseInput {
   isCourseOwner?: boolean;
 }
 
+// ── 学生评教（M6）──
+export interface StudentTeacher {
+  courseId: string;
+  courseName: string;
+  courseType: string;
+  teacherId: string;
+  teacherName: string;
+  submitted: boolean;
+}
+
 // ── 说课场次（M5）──
 export interface SaykeSessionTeacher {
   id: string;
@@ -499,6 +509,24 @@ export const api = {
     a.click();
     URL.revokeObjectURL(url);
   },
+
+  // ── 学生评教（M6）──
+  studentMyTeachers: (year: string, token: string) =>
+    request<StudentTeacher[]>(`/student/my-teachers?year=${year}`, {}, token),
+  submitStudentSurvey: (
+    payload: {
+      teacherId: string;
+      courseId: string;
+      comment?: string;
+      answers: { questionId: string; likertScore: number }[];
+    },
+    token: string,
+  ) =>
+    request<{ ok: boolean }>(
+      '/student/survey',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
 
   // ── 教师课程填报 ──
   getMyCourseReport: (year: string, token: string) =>

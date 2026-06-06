@@ -14,6 +14,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { ReportModule } from './report/report.module';
 import { SaykeModule } from './sayke/sayke.module';
 import { HealthController } from './health/health.controller';
+import { StudentModule } from './student/student.module';
 
 /**
  * 根模块。后续按 design §2.2 模块划分逐步加入：
@@ -43,6 +44,7 @@ import { HealthController } from './health/health.controller';
     ScoreModule,
     ReportModule,
     SaykeModule,
+    StudentModule,
   ],
   controllers: [HealthController],
 })

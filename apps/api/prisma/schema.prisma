@@ -598,6 +598,22 @@ model AuditLog {
   @@index([action, createdAt])
 }
 
+// ========== 学生评价审计（匿名保护，§7.2/T-602） ==========
+// 与公开的 EvalSubmission 分离：本表记录"谁评过谁"用于防重复，
+// 教师端只能看聚合后的 EvalSubmission，无法反查学生身份。
+
+model StudentEvalAudit {
+  id           String   @id @default(cuid())
+  studentId    String
+  teacherId    String
+  courseId     String
+  academicYear String
+  submittedAt  DateTime @default(now())
+
+  @@unique([studentId, teacherId, courseId, academicYear])
+  @@index([teacherId, academicYear])
+}
+
 // ========== 系统配置 ==========
 
 model SystemConfig {
