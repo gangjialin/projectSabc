@@ -15,6 +15,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: '/admin/dashboard', label: '仪表盘', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/import', label: '数据导入', roles: ['ADMIN'] },
+  { href: '/admin/schedule', label: '课表导入', roles: ['ADMIN'] },
   { href: '/admin/committee', label: '监控组名单', roles: ['ADMIN'] },
   { href: '/admin/questions', label: '题目管理', roles: ['ADMIN'] },
   { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN', 'DEAN'] },
@@ -35,7 +36,7 @@ const NAV: NavItem[] = [
   },
   { href: '/reviewer/evaluate', label: '我的评分任务', roles: ['REVIEWER', 'DEAN'] },
   { href: '/interviewer/score', label: '我的访谈评分', roles: ['INTERVIEWER', 'DEAN'] },
-  { href: '/teacher/course-report', label: '参评课程填报', roles: ['TEACHER', 'DEAN'] },
+  { href: '/teacher/course-report', label: '我的参评课程', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/exemption', label: '免计入申请', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/my-result', label: '我的成绩单', roles: ['TEACHER', 'DEAN'] },
   { href: '/teacher/appeal', label: '我的申诉', roles: ['TEACHER', 'DEAN'] },

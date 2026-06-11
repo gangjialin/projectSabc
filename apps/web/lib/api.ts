@@ -58,7 +58,7 @@ async function request<T>(
   return body.data;
 }
 
-export type ImportKind = 'teacher' | 'student' | 'course' | 'committee';
+export type ImportKind = 'teacher' | 'student' | 'committee';
 
 export interface TemplateQuestion {
   id: string;
@@ -161,30 +161,21 @@ export interface BatchAssignResult {
   }[];
 }
 
-// ── 教师课程填报 ──
-export interface CourseReport {
+// ── 课表导入 / 教师选课（课程） ──
+export interface CourseMine {
   id: string;
   courseCode: string;
   name: string;
   type: string;
-  level: string;
   classNames: string[];
   academicYear: string;
-  semester: string;
-  isReformCourse: boolean;
   isTargetCourse: boolean;
-  teacherId: string;
 }
-export interface ReportCourseInput {
-  courseCode: string;
-  name: string;
-  type: string;
-  level: string;
-  classNames: string[];
-  academicYear: string;
-  semester: string;
-  isReformCourse?: boolean;
-  isCourseOwner?: boolean;
+export interface ScheduleImportResult {
+  courses: number;
+  teachersMatched: number;
+  teachersCreated: number;
+  parseErrors: string[];
 }
 
 // ── 前置限定标记（T-405）──
@@ -787,24 +778,28 @@ export const api = {
       token,
     ),
 
-  // ── 教师课程填报 ──
-  listClasses: (token: string, major?: string, grade?: string) => {
-    const qs = new URLSearchParams();
-    if (major) qs.set('major', major);
-    if (grade) qs.set('grade', grade);
-    const s = qs.toString();
-    return request<string[]>(`/courses/classes${s ? `?${s}` : ''}`, {}, token);
-  },
-  getMyCourseReport: (year: string, token: string) =>
-    request<CourseReport | null>(
-      `/courses/my-report?year=${year}`,
-      {},
+  // ── 课表导入 / 教师选课 ──
+  importSchedule: (
+    file: File,
+    year: string,
+    type: string,
+    token: string,
+  ) =>
+    upload<ScheduleImportResult>(
+      `/courses/import-schedule?year=${encodeURIComponent(year)}&type=${type}`,
+      file,
       token,
     ),
-  reportCourse: (input: ReportCourseInput, token: string) =>
-    request<CourseReport>(
-      '/courses/report',
-      { method: 'POST', body: JSON.stringify(input) },
+  myCourses: (year: string, token: string) =>
+    request<CourseMine[]>(`/courses/mine?year=${year}`, {}, token),
+  selectTargetCourse: (
+    id: string,
+    opts: { type?: string; isCourseOwner?: boolean },
+    token: string,
+  ) =>
+    request<CourseMine>(
+      `/courses/${id}/select-target`,
+      { method: 'POST', body: JSON.stringify(opts) },
       token,
     ),
 

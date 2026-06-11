@@ -41,13 +41,14 @@ export default function TeacherExemptionPage() {
 
   useEffect(() => {
     void loadList();
-    // 取教师本学年填报课程作为申请对象
+    // 取教师本学年参评课程作为申请对象
     api
-      .getMyCourseReport(year, getToken())
-      .then((c) => {
-        if (c) {
-          setCourseId(c.id);
-          setCourseName(`${c.courseCode} ${c.name}`);
+      .myCourses(year, getToken())
+      .then((list) => {
+        const t = list.find((c) => c.isTargetCourse);
+        if (t) {
+          setCourseId(t.id);
+          setCourseName(`${t.courseCode} ${t.name}`);
         }
       })
       .catch(() => undefined);

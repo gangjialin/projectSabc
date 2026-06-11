@@ -152,45 +152,6 @@ export class ImportService {
       });
     }
 
-    if (type === ImportType.COURSE) {
-      // 课程编号唯一 + 授课教师工号必须存在
-      const codes = records.map((r) => r.courseCode as string).filter(Boolean);
-      const existCourses = await this.prisma.course.findMany({
-        where: { courseCode: { in: codes } },
-        select: { courseCode: true },
-      });
-      const existCodeSet = new Set(existCourses.map((c) => c.courseCode));
-
-      const teacherAccounts = records
-        .map((r) => r.teacherAccount as string)
-        .filter(Boolean);
-      const teachers = await this.prisma.user.findMany({
-        where: { loginAccount: { in: teacherAccounts }, userType: UserType.TEACHER },
-        select: { loginAccount: true },
-      });
-      const teacherSet = new Set(teachers.map((t) => t.loginAccount));
-
-      records.forEach((r, idx) => {
-        if (existCodeSet.has(r.courseCode as string)) {
-          conflicts++;
-          errors.push({
-            row: idx + 1,
-            field: 'courseCode',
-            header: '课程编号',
-            message: `课程编号已存在：${r.courseCode}`,
-          });
-        }
-        if (!teacherSet.has(r.teacherAccount as string)) {
-          conflicts++;
-          errors.push({
-            row: idx + 1,
-            field: 'teacherAccount',
-            header: '授课教师工号',
-            message: `授课教师工号不存在：${r.teacherAccount}（请先导入教师名单）`,
-          });
-        }
-      });
-    }
 
     if (type === ImportType.COMMITTEE) {
       const accounts = records
@@ -264,7 +225,7 @@ export class ImportService {
     if (type === ImportType.COMMITTEE) {
       return this.commitCommittee(records);
     }
-    return this.commitCourses(records);
+    throw new BadRequestException(`不支持的导入类型：${type}`);
   }
 
   /**
@@ -306,7 +267,7 @@ export class ImportService {
       ];
       for (const [codes, taskType] of groups) {
         for (const code of codes) {
-          const course = await this.prisma.course.findUnique({
+          const course = await this.prisma.course.findFirst({
             where: { courseCode: code },
             select: { id: true },
           });
@@ -372,34 +333,4 @@ export class ImportService {
     return { created, skipped: 0, errors: [] };
   }
 
-  private async commitCourses(records: ParsedRow[]): Promise<CommitResult> {
-    const accounts = records.map((r) => r.teacherAccount as string);
-    const teachers = await this.prisma.user.findMany({
-      where: { loginAccount: { in: accounts } },
-      select: { id: true, loginAccount: true },
-    });
-    const teacherMap = new Map(teachers.map((t) => [t.loginAccount, t.id]));
-
-    let created = 0;
-    await this.prisma.$transaction(async (tx) => {
-      for (const r of records) {
-        await tx.course.create({
-          data: {
-            courseCode: r.courseCode as string,
-            name: r.name as string,
-            type: r.type as never,
-            level: r.level as never,
-            classNames: (r.classNames as string[]) ?? [],
-            teacherId: teacherMap.get(r.teacherAccount as string)!,
-            academicYear: r.academicYear as string,
-            semester: r.semester as string,
-            isTargetCourse: (r.isTargetCourse as boolean) ?? false,
-            isReformCourse: (r.isReformCourse as boolean) ?? false,
-          },
-        });
-        created++;
-      }
-    });
-    return { created, skipped: 0, errors: [] };
-  }
 }

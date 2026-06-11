@@ -1,9 +1,4 @@
-import { CourseType } from '@app/shared';
-import {
-  COURSE_COLUMNS,
-  STUDENT_COLUMNS,
-  TEACHER_COLUMNS,
-} from './import.constants';
+import { STUDENT_COLUMNS, TEACHER_COLUMNS } from './import.constants';
 import { normalizeBool, parseRows } from './validators';
 
 describe('normalizeBool', () => {
@@ -71,52 +66,6 @@ describe('parseRows - 教师', () => {
   });
 });
 
-describe('parseRows - 课程', () => {
-  it('枚举映射 + 多值班级拆分', () => {
-    const { records, errors } = parseRows(
-      [
-        {
-          课程编号: 'C001',
-          课程名称: '游戏设计',
-          课程类型: '项目课',
-          课程级别: '一级项目课',
-          上课班级: '数媒2101；数媒2102, 数媒2103',
-          授课教师工号: 'T001',
-          学年: '2025-2026',
-          学期: '第一学期',
-          是否参评课程: '是',
-        },
-      ],
-      COURSE_COLUMNS,
-    );
-    expect(errors).toEqual([]);
-    expect(records[0].type).toBe(CourseType.PROJECT);
-    expect(records[0].classNames).toEqual(['数媒2101', '数媒2102', '数媒2103']);
-    expect(records[0].isReformCourse).toBe(false); // 选填布尔缺省 false
-  });
-
-  it('课程类型非法 → 报错并提示可选值', () => {
-    const { errors } = parseRows(
-      [
-        {
-          课程编号: 'C002',
-          课程名称: 'x',
-          课程类型: '兴趣课',
-          课程级别: '一般课',
-          上课班级: 'A',
-          授课教师工号: 'T1',
-          学年: '2025-2026',
-          学期: '第一学期',
-          是否参评课程: '否',
-        },
-      ],
-      COURSE_COLUMNS,
-    );
-    const e = errors.find((x) => x.field === 'type');
-    expect(e).toBeDefined();
-    expect(e!.message).toContain('理论课');
-  });
-});
 
 describe('parseRows - 学生', () => {
   it('合法学生行', () => {

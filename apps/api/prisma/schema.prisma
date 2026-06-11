@@ -75,7 +75,7 @@ model UserRole {
 
 model Course {
   id             String      @id @default(cuid())
-  courseCode     String      @unique
+  courseCode     String // 学校课程代码，非全局唯一（同代码可多教师/多开课）
   name           String
   type           CourseType
   level          CourseLevel @default(REGULAR)
@@ -94,6 +94,7 @@ model Course {
   exemptions  StudentEvalExemption[]
   trackings   ImprovementTracking[]
 
+  @@unique([courseCode, teacherId, academicYear]) // 一门"开课"的唯一键
   @@index([academicYear, isTargetCourse])
   @@index([teacherId])
   @@index([type])

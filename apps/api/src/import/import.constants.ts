@@ -1,10 +1,9 @@
-import { CourseLevel, CourseType, RoleCode } from '@app/shared';
+import { RoleCode } from '@app/shared';
 
-/** 导入类型 */
+/** 导入类型（课程改为「课表导入」，见 courses 模块；此处不再含 COURSE） */
 export enum ImportType {
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
-  COURSE = 'COURSE',
   COMMITTEE = 'COMMITTEE',
 }
 
@@ -43,34 +42,6 @@ export const STUDENT_COLUMNS: ColumnSpec[] = [
   { header: '年级', field: 'grade', required: true, type: 'string' },
 ];
 
-const COURSE_TYPE_MAP: Record<string, string> = {
-  理论课: CourseType.THEORY,
-  实践课: CourseType.PRACTICE,
-  项目课: CourseType.PROJECT,
-  毕业设计: CourseType.THESIS,
-};
-
-const COURSE_LEVEL_MAP: Record<string, string> = {
-  专业核心课: CourseLevel.CORE,
-  一级项目课: CourseLevel.PROJECT_L1,
-  二级项目课: CourseLevel.PROJECT_L2,
-  一般课: CourseLevel.REGULAR,
-};
-
-/** 课程名单（需求 §4.3） */
-export const COURSE_COLUMNS: ColumnSpec[] = [
-  { header: '课程编号', field: 'courseCode', required: true, type: 'string', unique: true },
-  { header: '课程名称', field: 'name', required: true, type: 'string' },
-  { header: '课程类型', field: 'type', required: true, type: 'enum', enumMap: COURSE_TYPE_MAP },
-  { header: '课程级别', field: 'level', required: true, type: 'enum', enumMap: COURSE_LEVEL_MAP },
-  { header: '上课班级', field: 'classNames', required: true, type: 'list' },
-  { header: '授课教师工号', field: 'teacherAccount', required: true, type: 'string' },
-  { header: '学年', field: 'academicYear', required: true, type: 'string' },
-  { header: '学期', field: 'semester', required: true, type: 'string' },
-  { header: '是否参评课程', field: 'isTargetCourse', required: true, type: 'bool' },
-  { header: '是否教改加难度课程', field: 'isReformCourse', required: false, type: 'bool' },
-];
-
 /** 院级质量监控组角色标记 → 角色码（需求 §4.4） */
 const COMMITTEE_ROLE_MAP: Record<string, string> = {
   院长: RoleCode.DEAN,
@@ -89,7 +60,6 @@ export const COMMITTEE_COLUMNS: ColumnSpec[] = [
 export const COLUMNS_BY_TYPE: Record<ImportType, ColumnSpec[]> = {
   [ImportType.TEACHER]: TEACHER_COLUMNS,
   [ImportType.STUDENT]: STUDENT_COLUMNS,
-  [ImportType.COURSE]: COURSE_COLUMNS,
   [ImportType.COMMITTEE]: COMMITTEE_COLUMNS,
 };
 

@@ -6,7 +6,6 @@ import { api, type ImportKind, type PreviewResult } from '@/lib/api';
 const KINDS: { value: ImportKind; label: string }[] = [
   { value: 'teacher', label: '教师名单' },
   { value: 'student', label: '学生名单' },
-  { value: 'course', label: '课程名单' },
 ];
 
 function getToken(): string {
