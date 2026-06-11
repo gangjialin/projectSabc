@@ -81,6 +81,11 @@ export class SaykeGateway implements OnGatewayConnection {
   ) {
     const user = client.data.user as SocketUser | undefined;
     if (!user) throw new WsException('未认证');
+    // 同行打分仅限教师侧角色（SECURITY_REVIEW L1：排除学生等无关角色）
+    const allowed = ['PEER', 'TEACHER', 'DEAN', 'REVIEWER', 'ADMIN'];
+    if (!user.roles.some((r) => allowed.includes(r))) {
+      throw new WsException('无同行打分权限');
+    }
 
     const session = await this.prisma.saykeSession.findUniqueOrThrow({
       where: { id: body.sessionId },

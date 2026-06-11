@@ -18,6 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { QuestionsService } from './questions.service';
 import { SaveTemplateDto } from './dto/save-template.dto';
+import { XLSX_UPLOAD_OPTIONS } from '../import/import.controller';
 
 interface UploadedExcel {
   buffer: Buffer;
@@ -92,7 +93,7 @@ export class QuestionsController {
   /** POST /questions/import?formType=LECTURE&courseType= —— 上传题目 Excel 批量导入 */
   @Post('import')
   @Roles(RoleCode.ADMIN)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', XLSX_UPLOAD_OPTIONS))
   async import(
     @Query('formType') formType: string,
     @Query('courseType') courseType: string | undefined,

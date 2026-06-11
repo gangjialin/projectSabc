@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
 import configuration from './config/configuration';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,12 +31,15 @@ import { FlagModule } from './flag/flag.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+    // 全局限流（SECURITY_REVIEW M1）：默认 100 次/分钟；登录另设更严的 @Throttle
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         connection: {
           host: config.get<string>('redis.host') ?? 'localhost',
           port: config.get<number>('redis.port') ?? 6379,
+          password: config.get<string>('redis.password'),
         },
       }),
     }),
@@ -57,5 +62,6 @@ import { FlagModule } from './flag/flag.module';
     FlagModule,
   ],
   controllers: [HealthController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

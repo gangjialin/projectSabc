@@ -24,6 +24,19 @@ interface UploadedExcel {
   originalname: string;
 }
 
+/** 上传限制：≤5MB 且仅 .xlsx（SECURITY_REVIEW M3） */
+export const XLSX_UPLOAD_OPTIONS = {
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (
+    _req: unknown,
+    file: { originalname: string },
+    cb: (err: Error | null, accept: boolean) => void,
+  ) => {
+    if (file.originalname.toLowerCase().endsWith('.xlsx')) cb(null, true);
+    else cb(new BadRequestException('仅支持 .xlsx 文件'), false);
+  },
+};
+
 function parseType(raw: string): ImportType {
   const t = raw.toUpperCase();
   if (t in ImportType) return t as ImportType;
@@ -54,7 +67,7 @@ export class ImportController {
 
   /** POST /import/teacher/preview —— 上传预览（不写库） */
   @Post(':type/preview')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', XLSX_UPLOAD_OPTIONS))
   async preview(
     @Param('type') type: string,
     @UploadedFile() file: UploadedExcel,
@@ -65,7 +78,7 @@ export class ImportController {
 
   /** POST /import/teacher/commit —— 确认导入（有错则整体拒绝） */
   @Post(':type/commit')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', XLSX_UPLOAD_OPTIONS))
   async commit(
     @Param('type') type: string,
     @UploadedFile() file: UploadedExcel,
