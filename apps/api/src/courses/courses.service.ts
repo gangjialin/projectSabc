@@ -6,6 +6,25 @@ import type { ReportCourseDto } from './dto/report-course.dto';
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * 从学生名单按 专业 / 年级 取真实班级（去重），供教师填报时级联多选。
+   * 不传则返回全部班级。
+   */
+  async listClasses(major?: string, grade?: string): Promise<string[]> {
+    const students = await this.prisma.user.findMany({
+      where: {
+        userType: 'STUDENT',
+        ...(major ? { major } : {}),
+        ...(grade ? { grade } : {}),
+        className: { not: null },
+      },
+      select: { className: true },
+    });
+    return [
+      ...new Set(students.map((s) => s.className).filter((c): c is string => !!c)),
+    ].sort();
+  }
+
   /** 教师查询本人某学年已填报的参评课程（无则 null） */
   getMyReport(teacherId: string, academicYear: string) {
     return this.prisma.course.findFirst({

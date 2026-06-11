@@ -121,7 +121,7 @@ describe('parseRows - 课程', () => {
 describe('parseRows - 学生', () => {
   it('合法学生行', () => {
     const { records, errors } = parseRows(
-      [{ 学号: '20210001', 姓名: '小明', 班级: '数媒2101', 所属专业: '数字媒体技术' }],
+      [{ 学号: '20210001', 姓名: '小明', 班级: '数媒2101', 所属专业: '数字媒体技术', 年级: '2023级' }],
       STUDENT_COLUMNS,
     );
     expect(errors).toEqual([]);

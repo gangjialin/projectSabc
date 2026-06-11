@@ -357,6 +357,7 @@ export class ImportService {
             department: (r.department as string) ?? null,
             className: (r.className as string) ?? null,
             major: (r.major as string) ?? null,
+            grade: (r.grade as string) ?? null,
             title: (r.title as string) ?? null,
             email: (r.email as string) ?? null,
             isAdminRole: (r.isAdminRole as boolean) ?? false,

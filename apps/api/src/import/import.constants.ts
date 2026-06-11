@@ -40,6 +40,7 @@ export const STUDENT_COLUMNS: ColumnSpec[] = [
   { header: '姓名', field: 'name', required: true, type: 'string' },
   { header: '班级', field: 'className', required: true, type: 'string' },
   { header: '所属专业', field: 'major', required: true, type: 'string' },
+  { header: '年级', field: 'grade', required: true, type: 'string' },
 ];
 
 const COURSE_TYPE_MAP: Record<string, string> = {

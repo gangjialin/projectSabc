@@ -31,6 +31,13 @@ export class CoursesController {
     return this.courses.list(year);
   }
 
+  /** GET /courses/classes?major=&grade= —— 按专业/年级从学生名单取真实班级（填报级联用） */
+  @Get('classes')
+  @Roles(RoleCode.TEACHER, RoleCode.DEAN, RoleCode.ADMIN)
+  classes(@Query('major') major?: string, @Query('grade') grade?: string) {
+    return this.courses.listClasses(major, grade);
+  }
+
   /** GET /courses/my-report?year= —— 教师查本人填报的参评课程 */
   @Get('my-report')
   @Roles(RoleCode.TEACHER, RoleCode.DEAN)

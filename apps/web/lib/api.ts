@@ -788,6 +788,13 @@ export const api = {
     ),
 
   // ── 教师课程填报 ──
+  listClasses: (token: string, major?: string, grade?: string) => {
+    const qs = new URLSearchParams();
+    if (major) qs.set('major', major);
+    if (grade) qs.set('grade', grade);
+    const s = qs.toString();
+    return request<string[]>(`/courses/classes${s ? `?${s}` : ''}`, {}, token);
+  },
   getMyCourseReport: (year: string, token: string) =>
     request<CourseReport | null>(
       `/courses/my-report?year=${year}`,

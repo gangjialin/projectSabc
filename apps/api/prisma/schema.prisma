@@ -24,6 +24,7 @@ model User {
   department    String?
   className     String?
   major         String?
+  grade         String? // 年级（学生），如 2023级，用于教师填报时按 专业/年级 筛选班级
   title         String?
   isAdminRole   Boolean  @default(false) // 中层管理职务标记
   isCourseOwner Boolean  @default(false) // 课程负责人
