@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import * as bcrypt from 'bcrypt';
-import { RoleCode, TaskType, UserType } from '@app/shared';
+import { RoleCode, UserType } from '@app/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { TasksService } from '../tasks/tasks.service';
 import { COLUMNS_BY_TYPE, ImportType } from './import.constants';
 import { parseRows, type ParsedRow, type ParseResult, type RowError } from './validators';
 
@@ -22,10 +21,7 @@ export interface CommitResult {
 
 @Injectable()
 export class ImportService {
-  constructor(
-    private prisma: PrismaService,
-    private tasks: TasksService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   /** 生成空白导入模板（仅表头行） */
   async generateTemplate(type: ImportType): Promise<Buffer> {
@@ -153,54 +149,6 @@ export class ImportService {
     }
 
 
-    if (type === ImportType.COMMITTEE) {
-      const accounts = records
-        .map((r) => r.loginAccount as string)
-        .filter(Boolean);
-      const users = await this.prisma.user.findMany({
-        where: { loginAccount: { in: accounts } },
-        select: { loginAccount: true },
-      });
-      const userSet = new Set(users.map((u) => u.loginAccount));
-
-      const allCodes = records.flatMap((r) => [
-        ...((r.lectureCourses as string[]) ?? []),
-        ...((r.materialCourses as string[]) ?? []),
-      ]);
-      const courses = await this.prisma.course.findMany({
-        where: { courseCode: { in: allCodes } },
-        select: { courseCode: true },
-      });
-      const courseSet = new Set(courses.map((c) => c.courseCode));
-
-      records.forEach((r, idx) => {
-        if (!userSet.has(r.loginAccount as string)) {
-          conflicts++;
-          errors.push({
-            row: idx + 1,
-            field: 'loginAccount',
-            header: '工号',
-            message: `工号不存在：${r.loginAccount}（请先导入教师名单）`,
-          });
-        }
-        const codes = [
-          ...((r.lectureCourses as string[]) ?? []),
-          ...((r.materialCourses as string[]) ?? []),
-        ];
-        for (const code of codes) {
-          if (!courseSet.has(code)) {
-            conflicts++;
-            errors.push({
-              row: idx + 1,
-              field: 'courses',
-              header: '课程编号',
-              message: `课程编号不存在：${code}（教师需先填报该课程）`,
-            });
-          }
-        }
-      });
-    }
-
     return conflicts;
   }
 
@@ -222,80 +170,7 @@ export class ImportService {
     if (type === ImportType.STUDENT) {
       return this.commitUsers(records, UserType.STUDENT, RoleCode.STUDENT, passwordHash);
     }
-    if (type === ImportType.COMMITTEE) {
-      return this.commitCommittee(records);
-    }
     throw new BadRequestException(`不支持的导入类型：${type}`);
-  }
-
-  /**
-   * 导入院级质量监控组名单（§4.4）：给已存在用户授角色（质量委员=REVIEWER，院长/系主任=DEAN）+
-   * 按"负责听课/材料课程"生成评价任务（复用 TasksService.assign 的校验：≤2次/不评自己/查重）。
-   * 任务分配若违规则跳过并在 errors 中记原因（非阻断，便于管理员知晓）。
-   */
-  private async commitCommittee(records: ParsedRow[]): Promise<CommitResult> {
-    let created = 0;
-    let skipped = 0;
-    const errors: RowError[] = [];
-
-    for (let idx = 0; idx < records.length; idx++) {
-      const r = records[idx]!;
-      const account = r.loginAccount as string;
-      const roleCode = r.role as string; // enumMap 已映射为 'DEAN' / 'REVIEWER'
-
-      const user = await this.prisma.user.findUnique({
-        where: { loginAccount: account },
-        select: { id: true },
-      });
-      if (!user) {
-        skipped++;
-        continue;
-      }
-
-      const role = await this.prisma.role.findUnique({ where: { code: roleCode } });
-      if (role) {
-        await this.prisma.userRole.upsert({
-          where: { userId_roleId: { userId: user.id, roleId: role.id } },
-          create: { userId: user.id, roleId: role.id },
-          update: {},
-        });
-      }
-
-      const groups: [string[], TaskType][] = [
-        [(r.lectureCourses as string[]) ?? [], TaskType.LECTURE],
-        [(r.materialCourses as string[]) ?? [], TaskType.MATERIAL],
-      ];
-      for (const [codes, taskType] of groups) {
-        for (const code of codes) {
-          const course = await this.prisma.course.findFirst({
-            where: { courseCode: code },
-            select: { id: true },
-          });
-          if (!course) {
-            skipped++;
-            continue;
-          }
-          try {
-            await this.tasks.assign({
-              courseId: course.id,
-              reviewerId: user.id,
-              taskType,
-            });
-            created++;
-          } catch (e) {
-            skipped++;
-            errors.push({
-              row: idx + 1,
-              field: 'courses',
-              header: '课程编号',
-              message: `${code}：${e instanceof Error ? e.message : '分配失败'}`,
-            });
-          }
-        }
-      }
-    }
-
-    return { created, skipped, errors };
   }
 
   private async commitUsers(

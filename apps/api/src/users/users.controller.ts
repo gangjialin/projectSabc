@@ -1,4 +1,12 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { RoleCode, UserType } from '@app/shared';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -17,5 +25,12 @@ export class UsersController {
     @Query('department') department?: string,
   ) {
     return this.users.list(type, department);
+  }
+
+  /** POST /users/:id/dept-head —— 管理员设/取消系主任（DEAN 角色） */
+  @Post(':id/dept-head')
+  @Roles(RoleCode.ADMIN)
+  setDeptHead(@Param('id') id: string, @Body('value') value: boolean) {
+    return this.users.setDeptHead(id, value);
   }
 }

@@ -44,6 +44,8 @@ export class AuthService {
         userType: user.userType,
         roles,
         isApprover: user.isApprover,
+        isLectureReviewer: user.isLectureReviewer,
+        isMaterialReviewer: user.isMaterialReviewer,
       },
     };
   }

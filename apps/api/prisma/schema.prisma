@@ -26,9 +26,11 @@ model User {
   major         String?
   grade         String? // 年级（学生），如 2023级，用于教师填报时按 专业/年级 筛选班级
   title         String?
-  isAdminRole   Boolean  @default(false) // 中层管理职务标记
-  isCourseOwner Boolean  @default(false) // 课程负责人
-  isApprover    Boolean  @default(false) // 审核委员会成员（院长/书记/中层，参与发布会签）
+  isAdminRole       Boolean @default(false) // 中层管理职务标记
+  isCourseOwner     Boolean @default(false) // 课程负责人
+  isApprover        Boolean @default(false) // 审核委员会成员（院长/书记/中层，参与发布会签）
+  isLectureReviewer Boolean @default(false) // 质量委员（听课，由系主任任命，听课对象可选全院）
+  isMaterialReviewer Boolean @default(false) // 材料评阅人（由系主任任命，评阅对象限本系）
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

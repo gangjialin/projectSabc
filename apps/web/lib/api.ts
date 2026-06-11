@@ -21,6 +21,8 @@ export interface LoginResult {
     userType: string;
     roles: string[];
     isApprover: boolean;
+    isLectureReviewer: boolean;
+    isMaterialReviewer: boolean;
   };
 }
 
@@ -58,7 +60,7 @@ async function request<T>(
   return body.data;
 }
 
-export type ImportKind = 'teacher' | 'student' | 'committee';
+export type ImportKind = 'teacher' | 'student';
 
 export interface TemplateQuestion {
   id: string;
@@ -132,6 +134,27 @@ export interface UserBrief {
   userType: string;
   department?: string | null;
   title?: string | null;
+  roleCodes?: string[];
+  isDeptHead?: boolean;
+}
+
+// ── 系主任职能 / 委员自助选评对象 ──
+export interface DeptTeacher {
+  id: string;
+  name: string;
+  loginAccount: string;
+  isLectureReviewer: boolean;
+  isMaterialReviewer: boolean;
+}
+export interface ReviewerCandidate {
+  teacherId: string;
+  name: string;
+  account: string;
+  department: string | null;
+  hasTargetCourse: boolean;
+  courseId: string | null;
+  courseName: string | null;
+  assigned: boolean;
 }
 
 export interface AssignTaskInput {
@@ -808,6 +831,45 @@ export const api = {
     request<CourseBrief[]>(`/courses${year ? `?year=${year}` : ''}`, {}, token),
   listUsers: (token: string, type?: string) =>
     request<UserBrief[]>(`/users${type ? `?type=${type}` : ''}`, {}, token),
+  setDeptHead: (id: string, value: boolean, token: string) =>
+    request<{ ok: boolean }>(
+      `/users/${id}/dept-head`,
+      { method: 'POST', body: JSON.stringify({ value }) },
+      token,
+    ),
+
+  // ── 系主任：任命质量委员/材料评阅人 ──
+  deptTeachers: (token: string) =>
+    request<DeptTeacher[]>('/tasks/dept/teachers', {}, token),
+  setReviewer: (
+    teacherId: string,
+    kind: 'LECTURE' | 'MATERIAL',
+    value: boolean,
+    token: string,
+  ) =>
+    request<{ ok: boolean }>(
+      '/tasks/dept/set-reviewer',
+      { method: 'POST', body: JSON.stringify({ teacherId, kind, value }) },
+      token,
+    ),
+
+  // ── 委员：自助选评价对象 ──
+  reviewerCandidates: (kind: 'LECTURE' | 'MATERIAL', token: string) =>
+    request<ReviewerCandidate[]>(
+      `/tasks/reviewer/candidates?kind=${kind}`,
+      {},
+      token,
+    ),
+  assignReviewTargets: (
+    kind: 'LECTURE' | 'MATERIAL',
+    teacherIds: string[],
+    token: string,
+  ) =>
+    request<{ created: number; failed: { teacherId: string; message: string }[] }>(
+      '/tasks/reviewer/assign-targets',
+      { method: 'POST', body: JSON.stringify({ kind, teacherIds }) },
+      token,
+    ),
 
   // ── 任务分配（T-305 / T-306）──
   assignTaskBatch: (items: AssignTaskInput[], token: string) =>

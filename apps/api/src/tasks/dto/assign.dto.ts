@@ -2,12 +2,34 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
 import { TaskStatus, TaskType } from '@app/shared';
+
+export class SetReviewerDto {
+  @IsString()
+  teacherId!: string;
+
+  @IsEnum(TaskType)
+  kind!: TaskType; // LECTURE=质量委员 / MATERIAL=材料评阅人
+
+  @IsBoolean()
+  value!: boolean;
+}
+
+export class AssignTargetsDto {
+  @IsEnum(TaskType)
+  kind!: TaskType;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  teacherIds!: string[];
+}
 
 export class AssignTaskDto {
   @IsString()

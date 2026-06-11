@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+type FlagKey = 'approver' | 'lectureReviewer' | 'materialReviewer';
 interface NavItem {
   href: string;
   label: string;
   roles: string[]; // 任一命中即显示
-  approverOnly?: boolean; // 仅审核委员会成员可见
+  flag?: FlagKey; // 需对应标记才显示
 }
 
 /** 导航项 —— roles 用 RoleCode 字符串。一人多角色时显示并集 */
@@ -16,14 +17,20 @@ const NAV: NavItem[] = [
   { href: '/admin/dashboard', label: '仪表盘', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/import', label: '数据导入', roles: ['ADMIN'] },
   { href: '/admin/schedule', label: '课表导入', roles: ['ADMIN'] },
-  { href: '/admin/committee', label: '监控组名单', roles: ['ADMIN'] },
+  { href: '/admin/dept-heads', label: '系主任设置', roles: ['ADMIN'] },
   { href: '/admin/questions', label: '题目管理', roles: ['ADMIN'] },
-  { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN', 'DEAN'] },
+  { href: '/admin/tasks', label: '任务分配', roles: ['ADMIN'] },
   { href: '/admin/sayke', label: '说课控制台', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/interview', label: '访谈管理', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/flags', label: '前置限定', roles: ['ADMIN', 'DEAN'] },
   { href: '/admin/results', label: '成绩管理/发布', roles: ['ADMIN', 'DEAN'] },
-  { href: '/approval', label: '成绩会签', roles: [], approverOnly: true },
+  // 系主任职能
+  { href: '/dept/lecture-reviewers', label: '质量委员任命', roles: ['DEAN'] },
+  { href: '/dept/material-reviewers', label: '材料评阅人任命', roles: ['DEAN'] },
+  // 委员自助选评价对象
+  { href: '/reviewer/lecture-targets', label: '我的听课对象', roles: [], flag: 'lectureReviewer' },
+  { href: '/reviewer/material-targets', label: '我的材料评阅对象', roles: [], flag: 'materialReviewer' },
+  { href: '/approval', label: '成绩会签', roles: [], flag: 'approver' },
   {
     href: '/admin/exemption',
     label: '免计入审核',
@@ -52,7 +59,11 @@ export function Chrome({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [roles, setRoles] = useState<string[]>([]);
   const [name, setName] = useState('');
-  const [isApprover, setIsApprover] = useState(false);
+  const [flags, setFlags] = useState<Record<FlagKey, boolean>>({
+    approver: false,
+    lectureReviewer: false,
+    materialReviewer: false,
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -61,10 +72,16 @@ export function Chrome({ children }: { children: React.ReactNode }) {
         roles?: string[];
         name?: string;
         isApprover?: boolean;
+        isLectureReviewer?: boolean;
+        isMaterialReviewer?: boolean;
       };
       setRoles(u.roles ?? []);
       setName(u.name ?? '');
-      setIsApprover(u.isApprover ?? false);
+      setFlags({
+        approver: u.isApprover ?? false,
+        lectureReviewer: u.isLectureReviewer ?? false,
+        materialReviewer: u.isMaterialReviewer ?? false,
+      });
     } catch {
       setRoles([]);
     }
@@ -82,8 +99,7 @@ export function Chrome({ children }: { children: React.ReactNode }) {
 
   const items = NAV.filter(
     (i) =>
-      i.roles.some((r) => roles.includes(r)) ||
-      (i.approverOnly && isApprover),
+      i.roles.some((r) => roles.includes(r)) || (i.flag ? flags[i.flag] : false),
   );
 
   function logout() {
