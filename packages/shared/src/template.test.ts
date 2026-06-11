@@ -22,12 +22,14 @@ describe('validateTemplate', () => {
     expect(errs.some((e) => e.dimensionNo === 3 && e.message.includes('题目分值之和'))).toBe(true);
   });
 
-  it('维度满分被改 → 报错', () => {
-    const t = validTemplate();
-    t[1]!.maxScore = 20; // 维度2 应为 25
-    t[1]!.questions = [{ maxScore: 10 }, { maxScore: 10 }];
-    const errs = validateTemplate(t);
-    expect(errs.some((e) => e.dimensionNo === 2 && e.message.includes('满分应为 25'))).toBe(true);
+  it('非标准维度分布但合计=100 → 通过（如听课 20/40/15/15/10）', () => {
+    const maxes = [20, 40, 15, 15, 10];
+    const t: DimensionShape[] = maxes.map((max, i) => ({
+      dimensionNo: i + 1,
+      maxScore: max,
+      questions: [{ maxScore: max }],
+    }));
+    expect(validateTemplate(t)).toEqual([]);
   });
 
   it('缺维度 → 结构错误', () => {
