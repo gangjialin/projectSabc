@@ -83,10 +83,12 @@ export default function QuestionsAdminPage() {
       setDims(
         DIM_NOS.map((no) => {
           const d = tpl.dimensions.find((x) => x.dimensionNo === no);
+          // 用模板**真实**的维度名/满分（各评价表分布不同：听课 20/40/15/15/10、
+          // 材料 20/20/30/15/15 等），不再写死 20/25/20/20/15。
           return {
             dimensionNo: no,
-            name: DIMENSION_NAMES[no],
-            maxScore: DEFAULT_CONFIG.dimensionMaxScores[no],
+            name: d?.name ?? DIMENSION_NAMES[no],
+            maxScore: d?.maxScore ?? DEFAULT_CONFIG.dimensionMaxScores[no],
             questions:
               d?.questions.map((q) => ({
                 indicator: q.indicator,
@@ -102,6 +104,10 @@ export default function QuestionsAdminPage() {
       setDims(buildBlank());
       setMessage('未找到生效模板，已载入空白模板');
     }
+  }
+
+  function updateDim(di: number, patch: Partial<AdminDimension>) {
+    setDims((prev) => prev.map((d, i) => (i === di ? { ...d, ...patch } : d)));
   }
 
   function updateQuestion(
@@ -361,10 +367,20 @@ export default function QuestionsAdminPage() {
           return (
             <div key={d.dimensionNo} className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">
+                <h3 className="flex items-center gap-2 font-medium">
                   维度 {d.dimensionNo}：{d.name}
-                  <span className="ml-2 text-xs text-slate-500">
-                    满分 {d.maxScore}
+                  <span className="ml-2 flex items-center gap-1 text-xs text-slate-500">
+                    满分
+                    <input
+                      type="number"
+                      step="1"
+                      min={0}
+                      value={d.maxScore}
+                      onChange={(e) =>
+                        updateDim(di, { maxScore: Number(e.target.value) })
+                      }
+                      className="w-16 rounded border px-2 py-0.5 text-right"
+                    />
                   </span>
                 </h3>
                 <span className={ok ? 'text-sm text-green-700' : 'text-sm text-red-600'}>
