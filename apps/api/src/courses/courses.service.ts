@@ -171,6 +171,197 @@ export class CoursesService {
     });
   }
 
+  /**
+   * 教师手工录入课程（课表里没有、或选修课无固定教学班时使用）。
+   * 同 (课程代码+本人+学年) 已存在则直接返回该课（提示前端去导名单），不重复建。
+   * @returns { course, existed }
+   */
+  async createManual(
+    teacherId: string,
+    input: {
+      courseCode: string;
+      name: string;
+      type: CourseType;
+      isElective: boolean;
+      academicYear: string;
+      classNames?: string[];
+    },
+  ) {
+    const teacher = await this.prisma.user.findUniqueOrThrow({
+      where: { id: teacherId },
+      select: { userType: true },
+    });
+    if (teacher.userType !== 'TEACHER') {
+      throw new BadRequestException('只有教师可录入课程');
+    }
+    const courseCode = input.courseCode.trim();
+    const name = input.name.trim();
+    if (!courseCode || !name) {
+      throw new BadRequestException('课程代码与课程名称均为必填');
+    }
+    const existing = await this.prisma.course.findUnique({
+      where: {
+        courseCode_teacherId_academicYear: {
+          courseCode,
+          teacherId,
+          academicYear: input.academicYear,
+        },
+      },
+    });
+    if (existing) {
+      return { course: existing, existed: true };
+    }
+    const classNames = (input.classNames ?? [])
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const course = await this.prisma.course.create({
+      data: {
+        courseCode,
+        name,
+        type: input.type,
+        isElective: input.isElective,
+        isManual: true,
+        academicYear: input.academicYear,
+        semester: '',
+        classNames,
+        teacherId,
+      },
+    });
+    return { course, existed: false };
+  }
+
+  /** 校验课程属于该教师，返回课程 */
+  private async ownCourseOrThrow(teacherId: string, courseId: string) {
+    const course = await this.prisma.course.findUniqueOrThrow({
+      where: { id: courseId },
+    });
+    if (course.teacherId !== teacherId) {
+      throw new BadRequestException('只能操作自己的课程');
+    }
+    return course;
+  }
+
+  /**
+   * 导入选课名单（教师端）：只与系统中**已存在**的学号匹配并登记选课关系，
+   * 查无的学号一律跳过并在报告中列出（不新建学生、不改其原班级/专业）。
+   * 重复导入按学号合并（已在的跳过）。模板列：学号(必填) / 姓名(选填，仅核对)。
+   */
+  async importRoster(teacherId: string, courseId: string, buffer: Buffer) {
+    await this.ownCourseOrThrow(teacherId, courseId);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    const ws = wb.worksheets[0];
+    if (!ws) throw new BadRequestException('名单为空或格式不正确');
+
+    const header = ws.getRow(1);
+    let cNo = -1;
+    for (let c = 1; c <= ws.columnCount; c++) {
+      if (cellStr(header.getCell(c).value) === '学号') cNo = c;
+    }
+    if (cNo < 0) throw new BadRequestException('名单缺少「学号」列');
+
+    const accounts: string[] = [];
+    for (let r = 2; r <= ws.rowCount; r++) {
+      const no = cellStr(ws.getRow(r).getCell(cNo).value);
+      if (no) accounts.push(no);
+    }
+    const uniqAccounts = [...new Set(accounts)];
+    if (uniqAccounts.length === 0) {
+      throw new BadRequestException('名单中未解析到任何学号');
+    }
+
+    const students = await this.prisma.user.findMany({
+      where: { loginAccount: { in: uniqAccounts }, userType: 'STUDENT' },
+      select: { id: true, loginAccount: true },
+    });
+    const idByAccount = new Map(students.map((s) => [s.loginAccount, s.id]));
+    const unmatched = uniqAccounts.filter((a) => !idByAccount.has(a));
+
+    const existing = await this.prisma.courseEnrollment.findMany({
+      where: { courseId, studentId: { in: [...idByAccount.values()] } },
+      select: { studentId: true },
+    });
+    const enrolledSet = new Set(existing.map((e) => e.studentId));
+
+    const toAdd = students.filter((s) => !enrolledSet.has(s.id));
+    if (toAdd.length > 0) {
+      await this.prisma.courseEnrollment.createMany({
+        data: toAdd.map((s) => ({ courseId, studentId: s.id })),
+        skipDuplicates: true,
+      });
+    }
+
+    return {
+      added: toAdd.length,
+      alreadyIn: idByAccount.size - toAdd.length,
+      unmatched, // 系统中查无的学号
+    };
+  }
+
+  /** 某课的选课名单（教师本人或管理员核查用） */
+  async roster(courseId: string) {
+    const rows = await this.prisma.courseEnrollment.findMany({
+      where: { courseId },
+      include: {
+        student: {
+          select: { id: true, loginAccount: true, name: true, className: true },
+        },
+      },
+      orderBy: { student: { loginAccount: 'asc' } },
+    });
+    return rows.map((e) => ({
+      enrollmentId: e.id,
+      studentId: e.student.id,
+      studentNo: e.student.loginAccount,
+      studentName: e.student.name,
+      className: e.student.className,
+    }));
+  }
+
+  /** 移出名单中一名学生（教师本人） */
+  async removeEnrollment(teacherId: string, courseId: string, studentId: string) {
+    await this.ownCourseOrThrow(teacherId, courseId);
+    await this.prisma.courseEnrollment.deleteMany({
+      where: { courseId, studentId },
+    });
+    return { ok: true };
+  }
+
+  /** 清空某课名单（教师本人） */
+  async clearRoster(teacherId: string, courseId: string) {
+    await this.ownCourseOrThrow(teacherId, courseId);
+    const { count } = await this.prisma.courseEnrollment.deleteMany({
+      where: { courseId },
+    });
+    return { removed: count };
+  }
+
+  /** 管理员核查：手工录入的课程 + 各课名单人数 */
+  async manualCourses(academicYear?: string) {
+    const courses = await this.prisma.course.findMany({
+      where: { isManual: true, ...(academicYear ? { academicYear } : {}) },
+      include: {
+        teacher: { select: { name: true, loginAccount: true } },
+        _count: { select: { enrollments: true } },
+      },
+      orderBy: [{ academicYear: 'desc' }, { courseCode: 'asc' }],
+    });
+    return courses.map((c) => ({
+      id: c.id,
+      courseCode: c.courseCode,
+      name: c.name,
+      type: c.type,
+      isElective: c.isElective,
+      isTargetCourse: c.isTargetCourse,
+      academicYear: c.academicYear,
+      classNames: c.classNames,
+      teacherName: c.teacher.name,
+      teacherAccount: c.teacher.loginAccount,
+      enrolledCount: c._count.enrollments,
+    }));
+  }
+
   /** 教师从自己的课程里选一门为参评（每学年限一门），可改类型/课程负责人 */
   async selectTarget(
     teacherId: string,

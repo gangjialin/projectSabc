@@ -24,13 +24,29 @@ export class StudentService {
       where: { id: studentId },
       select: { className: true },
     });
-    if (!student.className) return [];
+
+    // 双通道：班级匹配（必修/班级课）或显式选课名单（选修课）
+    const enrolledCourseIds = (
+      await this.prisma.courseEnrollment.findMany({
+        where: { studentId },
+        select: { courseId: true },
+      })
+    ).map((e) => e.courseId);
+
+    const orConds: Array<Record<string, unknown>> = [];
+    if (student.className) {
+      orConds.push({ classNames: { has: student.className } });
+    }
+    if (enrolledCourseIds.length > 0) {
+      orConds.push({ id: { in: enrolledCourseIds } });
+    }
+    if (orConds.length === 0) return [];
 
     const courses = await this.prisma.course.findMany({
       where: {
         isTargetCourse: true,
         academicYear,
-        classNames: { has: student.className },
+        OR: orConds,
       },
       include: { teacher: { select: { id: true, name: true } } },
     });
@@ -70,8 +86,14 @@ export class StudentService {
       where: { id: studentId },
       select: { className: true },
     });
-    if (!student.className || !course.classNames.includes(student.className)) {
-      throw new BadRequestException('你不在该课程的授课班级，无法评价该教师');
+    const inClass =
+      !!student.className && course.classNames.includes(student.className);
+    const enrolled =
+      (await this.prisma.courseEnrollment.count({
+        where: { courseId: course.id, studentId },
+      })) > 0;
+    if (!inClass && !enrolled) {
+      throw new BadRequestException('你不在该课程的授课班级或选课名单，无法评价该教师');
     }
 
     const exists = await this.prisma.studentEvalAudit.findUnique({

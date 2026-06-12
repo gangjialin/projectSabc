@@ -193,6 +193,41 @@ export interface CourseMine {
   classNames: string[];
   academicYear: string;
   isTargetCourse: boolean;
+  isElective?: boolean;
+  isManual?: boolean;
+}
+export interface CreateManualInput {
+  courseCode: string;
+  name: string;
+  type: string;
+  isElective: boolean;
+  academicYear?: string;
+  classNames?: string[];
+}
+export interface RosterImportResult {
+  added: number;
+  alreadyIn: number;
+  unmatched: string[];
+}
+export interface RosterEntry {
+  enrollmentId: string;
+  studentId: string;
+  studentNo: string;
+  studentName: string;
+  className: string | null;
+}
+export interface ManualCourse {
+  id: string;
+  courseCode: string;
+  name: string;
+  type: string;
+  isElective: boolean;
+  isTargetCourse: boolean;
+  academicYear: string;
+  classNames: string[];
+  teacherName: string;
+  teacherAccount: string;
+  enrolledCount: number;
 }
 export interface ScheduleImportResult {
   courses: number;
@@ -823,6 +858,36 @@ export const api = {
     request<CourseMine>(
       `/courses/${id}/select-target`,
       { method: 'POST', body: JSON.stringify(opts) },
+      token,
+    ),
+
+  // ── 教师录入课程 / 选课名单 ──
+  createManualCourse: (input: CreateManualInput, token: string) =>
+    request<{ course: CourseMine; existed: boolean }>(
+      `/courses/manual`,
+      { method: 'POST', body: JSON.stringify(input) },
+      token,
+    ),
+  importRoster: (courseId: string, file: File, token: string) =>
+    upload<RosterImportResult>(`/courses/${courseId}/roster/import`, file, token),
+  getRoster: (courseId: string, token: string) =>
+    request<RosterEntry[]>(`/courses/${courseId}/roster`, {}, token),
+  removeEnrollment: (courseId: string, studentId: string, token: string) =>
+    request<{ ok: boolean }>(
+      `/courses/${courseId}/roster/${studentId}`,
+      { method: 'DELETE' },
+      token,
+    ),
+  clearRoster: (courseId: string, token: string) =>
+    request<{ removed: number }>(
+      `/courses/${courseId}/roster`,
+      { method: 'DELETE' },
+      token,
+    ),
+  listManualCourses: (token: string, year?: string) =>
+    request<ManualCourse[]>(
+      `/courses/manual/list${year ? `?year=${encodeURIComponent(year)}` : ''}`,
+      {},
       token,
     ),
 

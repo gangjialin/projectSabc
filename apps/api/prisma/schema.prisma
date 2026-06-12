@@ -44,6 +44,7 @@ model User {
   exemptionsApplied StudentEvalExemption[] @relation("teacherExemption")
   trackingsOwned    ImprovementTracking[]
   appealsSubmitted  Appeal[]
+  enrollments       CourseEnrollment[]     @relation("studentEnrollments")
 
   @@index([userType])
   @@index([department])
@@ -87,6 +88,8 @@ model Course {
   classNames     String[]
   isTargetCourse Boolean     @default(false)
   isReformCourse Boolean     @default(false) // 教改加难度课程
+  isElective     Boolean     @default(false) // 选修课标识（选修无固定教学班，靠选课名单匹配学生）
+  isManual       Boolean     @default(false) // 教师手工录入（区别于课表导入），便于管理员核查
   createdAt      DateTime    @default(now())
 
   teacher     User                   @relation("teacherCourses", fields: [teacherId], references: [id])
@@ -95,11 +98,26 @@ model Course {
   interviews  Interview[]
   exemptions  StudentEvalExemption[]
   trackings   ImprovementTracking[]
+  enrollments CourseEnrollment[]
 
   @@unique([courseCode, teacherId, academicYear]) // 一门"开课"的唯一键
   @@index([academicYear, isTargetCourse])
   @@index([teacherId])
   @@index([type])
+}
+
+// 选课名单（选修课等无固定教学班的课程，显式登记参评学生）
+model CourseEnrollment {
+  id        String   @id @default(cuid())
+  courseId  String
+  studentId String
+  createdAt DateTime @default(now())
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation("studentEnrollments", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([studentId])
 }
 
 enum CourseType {
