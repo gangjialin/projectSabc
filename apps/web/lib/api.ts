@@ -50,8 +50,16 @@ async function request<T>(
     },
   });
   if (res.status === 401) {
-    handle401();
-    throw new Error('登录已过期，请重新登录');
+    // 登录/改密接口的 401 属"账号密码错误"类业务错误：不当作登录过期跳转，
+    // 透传后端真实提示（如"账号或密码错误"），避免误导。
+    const isAuthEntry =
+      path.startsWith('/auth/login') ||
+      path.startsWith('/auth/change-password');
+    if (!isAuthEntry) {
+      handle401();
+      throw new Error('登录已过期，请重新登录');
+    }
+    // 落到下方按 body.message 抛出真实原因
   }
   const body = (await res.json()) as ApiResponse<T>;
   if (!res.ok || body.code !== 0) {
