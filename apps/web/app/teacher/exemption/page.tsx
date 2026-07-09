@@ -87,8 +87,8 @@ export default function TeacherExemptionPage() {
       <div>
         <h1 className="text-2xl font-semibold">学生评价免计入申请</h1>
         <p className="mt-1 text-sm text-slate-500">
-          针对个别异常学生评价，可申请免计入。需经 系部主任 → 学院秘书组 → 学校质保部
-          三级审核，全部同意后该学生评价不计入成绩。每学期至多 5 条。
+          针对个别异常学生评价，可申请免计入。需经 系部主任 → 学校教学质量管理与保障部
+          两级审核，全部同意后该学生评价不计入成绩。每学期至多 5 条。
         </p>
       </div>
 
@@ -148,9 +148,8 @@ export default function TeacherExemptionPage() {
             <thead>
               <tr className="border-b bg-slate-50 text-left">
                 <th className="p-2">学生</th>
-                <th className="p-2">系部</th>
-                <th className="p-2">学院</th>
-                <th className="p-2">学校</th>
+                <th className="p-2">系部主任</th>
+                <th className="p-2">质保部</th>
                 <th className="p-2">结果</th>
               </tr>
             </thead>
@@ -161,7 +160,6 @@ export default function TeacherExemptionPage() {
                     {e.studentName}（{e.studentId}）
                   </td>
                   <td className="p-2">{reviewText(e.deptChiefReview)}</td>
-                  <td className="p-2">{reviewText(e.collegeReview)}</td>
                   <td className="p-2">{reviewText(e.universityReview)}</td>
                   <td className="p-2">
                     {STATUS_LABEL[e.finalStatus] ?? e.finalStatus}

@@ -42,7 +42,7 @@ export class ExemptionController {
     return this.exemption.myApplications(req.user.userId);
   }
 
-  /** GET /exemption/pending?level=DEPT|COLLEGE|UNIVERSITY —— 待审列表 */
+  /** GET /exemption/pending?level=DEPT|UNIVERSITY —— 待审列表（两级） */
   @Get('pending')
   @Roles(RoleCode.DEAN, RoleCode.ADMIN, RoleCode.QUALITY_DEPT)
   pending(@Query() q: PendingQueryDto) {
@@ -66,24 +66,7 @@ export class ExemptionController {
     );
   }
 
-  /** POST /exemption/:id/college-review —— 学院秘书组审核 */
-  @Post(':id/college-review')
-  @Roles(RoleCode.ADMIN)
-  collegeReview(
-    @Param('id') id: string,
-    @Req() req: AuthedReq,
-    @Body() dto: ReviewExemptionDto,
-  ) {
-    return this.exemption.review(
-      id,
-      'COLLEGE',
-      { userId: req.user.userId, name: req.user.account },
-      dto.agree,
-      dto.opinion,
-    );
-  }
-
-  /** POST /exemption/:id/university-review —— 学校教学质量保障部审核 */
+  /** POST /exemption/:id/university-review —— 学校教学质量管理与保障部审核（第二级/终审） */
   @Post(':id/university-review')
   @Roles(RoleCode.QUALITY_DEPT, RoleCode.ADMIN)
   universityReview(

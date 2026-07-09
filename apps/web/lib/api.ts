@@ -312,12 +312,11 @@ export interface ExemptionRow {
   academicYear: string;
   reason: string;
   deptChiefReview: ReviewStamp | null;
-  collegeReview: ReviewStamp | null;
   universityReview: ReviewStamp | null;
   finalStatus: 'PROCESSING' | 'APPROVED' | 'REJECTED';
   submittedAt: string;
 }
-export type ExemptionLevel = 'DEPT' | 'COLLEGE' | 'UNIVERSITY';
+export type ExemptionLevel = 'DEPT' | 'UNIVERSITY';
 
 // ── 成绩审核会签（M8）──
 export interface ApprovalVoteRow {
@@ -813,12 +812,7 @@ export const api = {
     opinion: string,
     token: string,
   ) => {
-    const path =
-      level === 'DEPT'
-        ? 'dept-review'
-        : level === 'COLLEGE'
-          ? 'college-review'
-          : 'university-review';
+    const path = level === 'DEPT' ? 'dept-review' : 'university-review';
     return request<ExemptionRow>(
       `/exemption/${id}/${path}`,
       { method: 'POST', body: JSON.stringify({ agree, opinion }) },

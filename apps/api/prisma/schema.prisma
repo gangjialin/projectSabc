@@ -367,9 +367,9 @@ model StudentEvalExemption {
   academicYear String
   reason       String // 申请理由（≥30 字，业务层校验）
 
-  // 三级审核：{status, opinion, reviewedAt, reviewerId, reviewerName}
+  // 两级审核（校发〔2026〕79号 V7.0 / 附件1）：{status, opinion, reviewedAt, reviewerId, reviewerName}
+  // 系部主任 → 教学质量管理与保障部
   deptChiefReview  Json?
-  collegeReview    Json?
   universityReview Json?
 
   finalStatus ExemptionStatus @default(PROCESSING)

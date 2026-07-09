@@ -85,8 +85,8 @@ export class ExemptionService {
   }
 
   /**
-   * 各级待审列表：
-   *  DEPT 系部主任 = 尚无系部审核；COLLEGE = 系部已过、学院未审；UNIVERSITY = 学院已过、学校未审。
+   * 各级待审列表（V7.0 两级）：
+   *  DEPT 系部主任 = 尚无系部审核；UNIVERSITY 质保部 = 系部已过、学校未审。
    */
   async pending(level: ReviewLevel) {
     const all = await this.prisma.studentEvalExemption.findMany({
@@ -95,12 +95,11 @@ export class ExemptionService {
     });
     return all.filter((e) => {
       if (level === 'DEPT') return !e.deptChiefReview;
-      if (level === 'COLLEGE') return !!e.deptChiefReview && !e.collegeReview;
-      return !!e.collegeReview && !e.universityReview;
+      return !!e.deptChiefReview && !e.universityReview;
     });
   }
 
-  /** 三级审核统一处理：顺序校验 + 驳回即终止 + 三级通过即免计入 */
+  /** 两级审核统一处理：顺序校验 + 驳回即终止 + 两级通过即免计入（系部主任 → 质保部） */
   async review(
     id: string,
     level: ReviewLevel,
@@ -118,11 +117,8 @@ export class ExemptionService {
     if (level === 'DEPT' && ex.deptChiefReview) {
       throw new ConflictException('系部已审核');
     }
-    if (level === 'COLLEGE' && (!ex.deptChiefReview || ex.collegeReview)) {
-      throw new BadRequestException('需系部先审核，且学院未审核');
-    }
-    if (level === 'UNIVERSITY' && (!ex.collegeReview || ex.universityReview)) {
-      throw new BadRequestException('需学院先审核，且学校未审核');
+    if (level === 'UNIVERSITY' && (!ex.deptChiefReview || ex.universityReview)) {
+      throw new BadRequestException('需系部主任先审核，且学校未审核');
     }
 
     const stamp: ReviewStamp = {
@@ -132,19 +128,14 @@ export class ExemptionService {
       reviewerId: reviewer.userId,
       reviewerName: reviewer.name,
     };
-    const field =
-      level === 'DEPT'
-        ? 'deptChiefReview'
-        : level === 'COLLEGE'
-          ? 'collegeReview'
-          : 'universityReview';
+    const field = level === 'DEPT' ? 'deptChiefReview' : 'universityReview';
 
     const data: Record<string, unknown> = { [field]: stamp };
     if (!agree) {
       data.finalStatus = ExemptionStatus.REJECTED;
       data.decidedAt = new Date();
     } else if (level === 'UNIVERSITY') {
-      data.finalStatus = ExemptionStatus.APPROVED; // 三级全过
+      data.finalStatus = ExemptionStatus.APPROVED; // 两级全过
       data.decidedAt = new Date();
     }
 

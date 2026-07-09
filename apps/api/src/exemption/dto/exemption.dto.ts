@@ -22,8 +22,8 @@ export class ReviewExemptionDto {
   opinion?: string;
 }
 
-/** 审核级别 */
-export const REVIEW_LEVELS = ['DEPT', 'COLLEGE', 'UNIVERSITY'] as const;
+/** 审核级别（V7.0 两级：系部主任 → 教学质量管理与保障部） */
+export const REVIEW_LEVELS = ['DEPT', 'UNIVERSITY'] as const;
 export type ReviewLevel = (typeof REVIEW_LEVELS)[number];
 
 export class PendingQueryDto {

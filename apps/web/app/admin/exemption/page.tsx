@@ -10,7 +10,6 @@ function getToken(): string {
 
 const LEVELS: { value: ExemptionLevel; label: string }[] = [
   { value: 'DEPT', label: '系部主任审核' },
-  { value: 'COLLEGE', label: '学院秘书组审核' },
   { value: 'UNIVERSITY', label: '学校质保部审核' },
 ];
 
@@ -53,7 +52,7 @@ export default function AdminExemptionPage() {
       <div>
         <h1 className="text-2xl font-semibold">免计入申请审核</h1>
         <p className="mt-1 text-sm text-slate-500">
-          三级顺序审核：系部主任 → 学院秘书组 → 学校质保部。任一级驳回则流程终止。
+          两级顺序审核：系部主任 → 学校教学质量管理与保障部。任一级驳回则流程终止。
         </p>
       </div>
 
@@ -95,14 +94,9 @@ export default function AdminExemptionPage() {
                 <div className="mt-2 rounded bg-slate-50 p-2 text-slate-700">
                   申请理由：{e.reason}
                 </div>
-                {level !== 'DEPT' && e.deptChiefReview && (
+                {level === 'UNIVERSITY' && e.deptChiefReview && (
                   <div className="mt-1 text-xs text-slate-500">
-                    系部意见：{e.deptChiefReview.opinion || '（无）'}
-                  </div>
-                )}
-                {level === 'UNIVERSITY' && e.collegeReview && (
-                  <div className="text-xs text-slate-500">
-                    学院意见：{e.collegeReview.opinion || '（无）'}
+                    系部主任意见：{e.deptChiefReview.opinion || '（无）'}
                   </div>
                 )}
               </div>
