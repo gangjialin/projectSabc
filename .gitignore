@@ -33,3 +33,7 @@ pnpm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Word 打开时的临时锁文件
+~$*
+**/~$*
