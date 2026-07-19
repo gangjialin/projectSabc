@@ -41,8 +41,12 @@ export function checkDataCompleteness(
 ): IntegrityResult {
   const warnings: IntegrityWarning[] = [];
   const min = config.minEvaluatorCount;
+  // 权重为 0 的来源本轮不计入综合分，其数据量不作为完整性要求
+  const useSupervisor = config.weights.supervisor > 0;
+  const usePeer = config.weights.peer > 0;
+  const useStudent = config.weights.student > 0;
 
-  if (counts.lecture < min.lecture) {
+  if (useSupervisor && counts.lecture < min.lecture) {
     warnings.push({
       item: 'lecture',
       required: min.lecture,
@@ -51,7 +55,7 @@ export function checkDataCompleteness(
       message: `听课次数不足，需≥${min.lecture} 次，当前 ${counts.lecture} 次`,
     });
   }
-  if (counts.material < 1) {
+  if (useSupervisor && counts.material < 1) {
     warnings.push({
       item: 'material',
       required: 1,
@@ -60,7 +64,7 @@ export function checkDataCompleteness(
       message: `缺少材料审查记录，需≥1 次，当前 ${counts.material} 次`,
     });
   }
-  if (counts.studentSurvey < min.studentSurvey) {
+  if (useStudent && counts.studentSurvey < min.studentSurvey) {
     warnings.push({
       item: 'studentSurvey',
       required: min.studentSurvey,
@@ -69,7 +73,7 @@ export function checkDataCompleteness(
       message: `学生问卷份数不足，需≥${min.studentSurvey} 份，当前 ${counts.studentSurvey} 份`,
     });
   }
-  if (counts.peer > 0 && counts.peer < min.peer) {
+  if (usePeer && counts.peer > 0 && counts.peer < min.peer) {
     warnings.push({
       item: 'peer',
       required: min.peer,
@@ -78,7 +82,7 @@ export function checkDataCompleteness(
       message: `同行打分不足 ${min.peer} 人（当前 ${counts.peer}），将取算术平均不去极值`,
     });
   }
-  if (counts.interview > 0 && counts.interview < min.interview) {
+  if (useStudent && counts.interview > 0 && counts.interview < min.interview) {
     warnings.push({
       item: 'interview',
       required: min.interview,

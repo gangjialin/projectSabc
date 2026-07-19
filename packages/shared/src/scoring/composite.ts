@@ -45,8 +45,12 @@ export function studentScore(
 }
 
 /**
- * 综合评价分 S = 上级 × 40% + 同行 × 30% + 学生 × 30%。
+ * 综合评价分 S = 上级 × 权重 + 同行 × 权重 + 学生 × 权重（默认 40/30/30）。
  * 需求 §6.5。
+ *
+ * 权重为 0 的来源视为"本轮不计入"：既不参与求和，也不要求其分数存在
+ * （如 2025-2026 学年执行口径：同行 60% + 上级 40%，学生不计入）。
+ * 权重 > 0 的来源缺分 → null（数据不完整由上层判定）。
  */
 export function compositeScore(
   supervisor: number | null,
@@ -54,7 +58,17 @@ export function compositeScore(
   student: number | null,
   config: EvalConfig = DEFAULT_CONFIG,
 ): number | null {
-  if (supervisor === null || peer === null || student === null) return null;
   const { supervisor: ws, peer: wp, student: wst } = config.weights;
-  return round2(supervisor * ws + peer * wp + student * wst);
+  const parts: Array<[number | null, number]> = [
+    [supervisor, ws],
+    [peer, wp],
+    [student, wst],
+  ];
+  let total = 0;
+  for (const [score, weight] of parts) {
+    if (weight === 0) continue;
+    if (score === null) return null;
+    total += score * weight;
+  }
+  return round2(total);
 }

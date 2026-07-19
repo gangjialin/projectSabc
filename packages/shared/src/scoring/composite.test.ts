@@ -56,4 +56,17 @@ describe('U-SCORE-04 权重可配置', () => {
     // 100*0.5 + 0*0.25 + 0*0.25 = 50
     expect(compositeScore(100, 0, 0, cfg)).toBeCloseTo(50, 10);
   });
+
+  it('权重为 0 的来源不计入且不要求有分（2025-2026 执行口径：同行60%+上级40%）', () => {
+    const cfg: EvalConfig = {
+      ...DEFAULT_CONFIG,
+      weights: { supervisor: 0.4, peer: 0.6, student: 0 },
+    };
+    // 86*0.4 + 90*0.6 = 34.4 + 54 = 88.4；学生 null 不阻断
+    expect(compositeScore(86, 90, null, cfg)).toBeCloseTo(88.4, 10);
+    // 学生有分也不计入
+    expect(compositeScore(86, 90, 100, cfg)).toBeCloseTo(88.4, 10);
+    // 权重>0 的来源缺分仍 → null
+    expect(compositeScore(null, 90, null, cfg)).toBeNull();
+  });
 });

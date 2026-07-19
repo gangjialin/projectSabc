@@ -29,12 +29,13 @@ export function weightedDimensionRate(
   triple: { supervisor: number | null; peer: number | null; student: number | null },
   config: EvalConfig = DEFAULT_CONFIG,
 ): number | null {
+  // 权重为 0 的来源本轮不计入（与 compositeScore 口径一致），亦不参与归一化
   const parts: { rate: number; weight: number }[] = [];
-  if (triple.supervisor !== null)
+  if (triple.supervisor !== null && config.weights.supervisor > 0)
     parts.push({ rate: triple.supervisor, weight: config.weights.supervisor });
-  if (triple.peer !== null)
+  if (triple.peer !== null && config.weights.peer > 0)
     parts.push({ rate: triple.peer, weight: config.weights.peer });
-  if (triple.student !== null)
+  if (triple.student !== null && config.weights.student > 0)
     parts.push({ rate: triple.student, weight: config.weights.student });
 
   if (parts.length === 0) return null;
