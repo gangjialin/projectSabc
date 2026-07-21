@@ -26,13 +26,16 @@ export interface LoginResult {
   };
 }
 
-/** 登录态失效统一处理：清除令牌并跳回登录页 */
+/** 登录态失效统一处理：清除令牌并跳回登录页（带回跳地址，登录后回到原页面） */
 function handle401() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   if (!window.location.pathname.startsWith('/login')) {
-    window.location.href = '/login';
+    const next = encodeURIComponent(
+      window.location.pathname + window.location.search,
+    );
+    window.location.href = `/login?next=${next}`;
   }
 }
 

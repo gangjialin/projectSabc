@@ -87,6 +87,19 @@ export class EvaluationService {
       });
       if (dup) throw new ConflictException('该任务已提交，提交后锁定');
     }
+    // 说课场次：同一评委对同一说课教师限提交一次（服务端兜底，前端状态丢失/刷新也拦得住）
+    if (dto.sessionId && !isAnonymous) {
+      const dup = await this.prisma.evalSubmission.findFirst({
+        where: {
+          sessionId: dto.sessionId,
+          evaluatorId: evaluator.userId,
+          evaluateeTeacherId: dto.evaluateeTeacherId,
+          formType: dto.formType,
+        },
+        select: { id: true },
+      });
+      if (dup) throw new ConflictException('您已对该说课教师提交过评分');
+    }
 
     return this.prisma.evalSubmission.create({
       data: {

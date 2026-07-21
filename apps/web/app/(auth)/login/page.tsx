@@ -20,7 +20,10 @@ export default function LoginPage() {
       // 演示：实际应存入安全存储 + 全局状态（Zustand）
       localStorage.setItem('token', res.accessToken);
       localStorage.setItem('user', JSON.stringify(res.user));
-      router.push(res.mustChangePwd ? '/change-password' : '/dashboard');
+      // ?next= 回跳（如说课页被 401 弹回登录后，登录完直接回说课页）
+      const next = new URLSearchParams(window.location.search).get('next');
+      const safeNext = next && next.startsWith('/') ? next : '/dashboard';
+      router.push(res.mustChangePwd ? '/change-password' : safeNext);
     } catch (err) {
       setError(err instanceof Error ? err.message : '登录失败');
     } finally {

@@ -37,8 +37,8 @@ export default function PeerSessionPage() {
   );
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  /** 已对当前教师提交过 → 锁定，等下一位 */
-  const [submittedFor, setSubmittedFor] = useState<string | null>(null);
+  /** 本人已评过的教师集合（join 时由服务端恢复，刷新不丢） */
+  const [scoredIds, setScoredIds] = useState<Set<string>>(new Set());
 
   // 加载 PEER 题目模板（同行说课通用）
   useEffect(() => {
@@ -54,16 +54,33 @@ export default function PeerSessionPage() {
   useEffect(() => {
     const socket = io(`${SOCKET_URL}/sayke`, {
       auth: { token: getToken() },
-      transports: ['websocket'],
+      // websocket 失败时回落 polling（微信内置浏览器/部分校园网代理下 WS 握手会被拦）
+      transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      socket.emit(
+      socket.timeout(10000).emit(
         'join',
         { sessionId },
-        (res: { session: SaykeSession }) => {
+        (
+          err: unknown,
+          res:
+            | { session?: SaykeSession; scoredTeacherIds?: string[]; error?: string }
+            | undefined,
+        ) => {
+          if (err) {
+            setStatus('error');
+            setMessage('加入场次超时，请下拉刷新重试');
+            return;
+          }
+          if (res?.error) {
+            setStatus('error');
+            setMessage(res.error);
+            return;
+          }
           if (res?.session) setSession(res.session);
+          if (res?.scoredTeacherIds) setScoredIds(new Set(res.scoredTeacherIds));
           setStatus('ready');
         },
       );
@@ -86,23 +103,29 @@ export default function PeerSessionPage() {
     (t) => t.teacherId === session.currentTeacherId && t.status === 'ACTIVE',
   );
   const isSelf = currentTeacher?.teacherId === getUserId();
-  const alreadySubmitted = submittedFor === session?.currentTeacherId;
+  const alreadySubmitted =
+    !!session?.currentTeacherId && scoredIds.has(session.currentTeacherId);
 
   function submit(
     answers: { questionId: string; likertScore: number }[],
     comment: string,
   ) {
     const socket = socketRef.current;
-    if (!socket || !session) return;
+    if (!socket || !session?.currentTeacherId) return;
+    const target = session.currentTeacherId; // 锁定"我此刻看到的评价对象"
     setSubmitting(true);
     setMessage(null);
-    socket.emit(
+    socket.timeout(15000).emit(
       'score',
-      { sessionId, answers, comment },
-      (res: { ok?: boolean; error?: string } | undefined) => {
+      { sessionId, evaluateeTeacherId: target, answers, comment },
+      (err: unknown, res: { ok?: boolean; error?: string } | undefined) => {
         setSubmitting(false);
+        if (err) {
+          setMessage('提交超时，网络不稳定 — 请重试（已提交过会提示,不会重复计分）');
+          return;
+        }
         if (res?.ok) {
-          setSubmittedFor(session.currentTeacherId);
+          setScoredIds((prev) => new Set(prev).add(target));
           setMessage('提交成功，等待下一位说课教师');
         } else {
           setMessage(res?.error ?? '提交失败');

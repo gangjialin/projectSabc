@@ -29,7 +29,7 @@ export default function DisplaySessionPage() {
   useEffect(() => {
     const socket = io(`${SOCKET_URL}/sayke`, {
       auth: { token: getToken() },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
     socket.on('connect', () => {
       socket.emit(
