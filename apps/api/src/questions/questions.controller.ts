@@ -42,7 +42,15 @@ export class QuestionsController {
 
   /** GET /questions/template?formType=LECTURE&courseType=PROJECT —— 取生效模板用于渲染评分表 */
   @Get('template')
-  @Roles(RoleCode.ADMIN, RoleCode.DEAN, RoleCode.REVIEWER, RoleCode.PEER, RoleCode.STUDENT)
+  @Roles(
+    RoleCode.ADMIN,
+    RoleCode.DEAN,
+    RoleCode.REVIEWER,
+    RoleCode.PEER,
+    RoleCode.STUDENT,
+    // 普通教师需要读题目模板：说课现场全体教师打分（漏 TEACHER 导致 403"无访问该资源的权限"）
+    RoleCode.TEACHER,
+  )
   getTemplate(
     @Query('formType') formType: FormType,
     @Query('courseType') courseType?: CourseType,
