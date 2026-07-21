@@ -6,6 +6,7 @@ import {
   type CourseBrief,
   type SaykeLive,
   type SaykeSession,
+  type SaykeSessionBrief,
   type UserBrief,
 } from '@/lib/api';
 
@@ -33,8 +34,17 @@ export default function SaykeAdminPage() {
   const [session, setSession] = useState<SaykeSession | null>(null);
   const [live, setLive] = useState<SaykeLive | null>(null);
   const [loadId, setLoadId] = useState('');
+  const [sessionList, setSessionList] = useState<SaykeSessionBrief[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const loadList = useCallback(async () => {
+    try {
+      setSessionList(await api.saykeList(getToken()));
+    } catch {
+      /* 列表失败不阻断控制台其他功能 */
+    }
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -46,7 +56,8 @@ export default function SaykeAdminPage() {
       .catch((e) =>
         setMessage(e instanceof Error ? e.message : '加载教师/课程失败'),
       );
-  }, []);
+    void loadList();
+  }, [loadList]);
 
   const refresh = useCallback(async (id: string) => {
     try {
@@ -106,6 +117,56 @@ export default function SaykeAdminPage() {
         <p role="alert" className="rounded-md bg-slate-100 px-3 py-2 text-sm">
           {message}
         </p>
+      )}
+
+      {/* 历史场次（页面刷新后从这里恢复控制） */}
+      {!session && sessionList.length > 0 && (
+        <section className="space-y-2 rounded-lg border p-4">
+          <h2 className="text-sm font-medium text-slate-600">
+            历史场次（点「进入控制」恢复）
+          </h2>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b bg-slate-50 text-left">
+                <th className="p-2">场次</th>
+                <th className="p-2">日期</th>
+                <th className="p-2">状态</th>
+                <th className="p-2">教师数</th>
+                <th className="p-2">已收评分</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessionList.map((s) => (
+                <tr key={s.id} className="border-b">
+                  <td className="p-2">{s.name}</td>
+                  <td className="p-2 text-slate-500">
+                    {s.scheduledDate?.slice(0, 10)}
+                  </td>
+                  <td className="p-2">
+                    {s.status === 'LOCKED' ? (
+                      <span className="text-slate-400">已锁定</span>
+                    ) : s.status === 'IN_PROGRESS' ? (
+                      <span className="text-green-700">进行中</span>
+                    ) : (
+                      '未开始'
+                    )}
+                  </td>
+                  <td className="p-2">{s.teacherCount}</td>
+                  <td className="p-2">{s.submissionCount}</td>
+                  <td className="p-2">
+                    <button
+                      onClick={() => void refresh(s.id)}
+                      className="rounded-md border px-3 py-1 hover:bg-slate-100"
+                    >
+                      进入控制
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
       )}
 
       {/* 创建场次 */}
@@ -189,7 +250,7 @@ export default function SaykeAdminPage() {
             <div className="flex gap-2 text-sm">
               <a href={`/display/session/${session.id}`} target="_blank"
                 className="rounded-md border px-3 py-2 hover:bg-slate-100">打开大屏 ↗</a>
-              <button onClick={() => { setSession(null); setLive(null); }}
+              <button onClick={() => { setSession(null); setLive(null); void loadList(); }}
                 className="rounded-md border px-3 py-2 hover:bg-slate-100">返回</button>
             </div>
           </div>

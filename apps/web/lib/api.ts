@@ -385,6 +385,16 @@ export interface SaykeStatePayload {
   session: SaykeSession;
   live: SaykeLive | null;
 }
+export interface SaykeSessionBrief {
+  id: string;
+  name: string;
+  scheduledDate: string;
+  academicYear: string;
+  status: string;
+  teacherCount: number;
+  submissionCount: number;
+  createdAt: string;
+}
 
 // ── 评价结果 / 成绩单（M8）──
 export interface FinalResultRow {
@@ -538,6 +548,12 @@ export const api = {
     ),
 
   // ── 说课场次（M5）──
+  saykeList: (token: string, year?: string) =>
+    request<SaykeSessionBrief[]>(
+      `/sayke${year ? `?year=${encodeURIComponent(year)}` : ''}`,
+      {},
+      token,
+    ),
   saykeGet: (id: string, token: string) =>
     request<SaykeStatePayload>(`/sayke/${id}`, {}, token),
   saykeCreate: (

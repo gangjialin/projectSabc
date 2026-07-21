@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { RoleCode } from '@app/shared';
@@ -27,6 +28,13 @@ export class SaykeController {
   @Roles(RoleCode.ADMIN, RoleCode.DEAN)
   create(@Body() dto: CreateSessionDto) {
     return this.sayke.createSession(dto);
+  }
+
+  /** GET /sayke —— 历史场次列表（控制台恢复选择） */
+  @Get()
+  @Roles(RoleCode.ADMIN, RoleCode.DEAN)
+  list(@Query('year') year?: string) {
+    return this.sayke.listSessions(year);
   }
 
   /** GET /sayke/:id —— 场次详情（含教师/课程名、当前进度、实时聚合） */

@@ -40,6 +40,26 @@ export class SaykeService {
     });
   }
 
+  /** 历史场次列表（控制台恢复用：页面刷新后可重新选中之前创建的场次） */
+  async listSessions(academicYear?: string) {
+    const sessions = await this.prisma.saykeSession.findMany({
+      where: academicYear ? { academicYear } : undefined,
+      include: { _count: { select: { teachers: true, submissions: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+    return sessions.map((s) => ({
+      id: s.id,
+      name: s.name,
+      scheduledDate: s.scheduledDate,
+      academicYear: s.academicYear,
+      status: s.status,
+      teacherCount: s._count.teachers,
+      submissionCount: s._count.submissions,
+      createdAt: s.createdAt,
+    }));
+  }
+
   /** 取场次详情（含教师/课程名称，供大屏与移动端展示） */
   async getSession(id: string) {
     const s = await this.prisma.saykeSession.findUnique({
